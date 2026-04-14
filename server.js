@@ -12,15 +12,11 @@ const redis = new Redis({
   token: "gQAAAAAAAYAPAAIncDIwNjA2ZjEyZDUwZGQ0YTJmOGEyOWExMzk5ODIwOTI4MnAyOTgzMTk",
 });
 
-const ASAAS_KEY  = process.env.ASAAS_API_KEY || "";   // cole sua chave Asaas aqui
-const ASAAS_URL  = "https://api.asaas.com/api/v3";    // produção
-const BASE_URL   = process.env.RAILWAY_PUBLIC_DOMAIN
+const BASE_URL = process.env.RAILWAY_PUBLIC_DOMAIN
   ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
   : process.env.BASE_URL || "https://whatauto-bot-production.up.railway.app";
 
-const USE_ASAAS  = ASAAS_KEY.length > 10;             // usa Asaas se tiver chave
-
-console.log(`✅ JustHelp Bot v10 | Asaas=${USE_ASAAS} | ${BASE_URL}`);
+console.log(`✅ JustHelp Bot v10 | ${BASE_URL}`);
 
 // ─────────────────────────────────────────────────────────────
 //  PIX MANUAL (fallback sem Asaas)
@@ -45,59 +41,11 @@ async function paginaPix(valor,nome=""){
 }
 
 // ─────────────────────────────────────────────────────────────
-//  ASAAS — gerar cobrança e link de pagamento
-// ─────────────────────────────────────────────────────────────
-async function criarCobrancaAsaas(nome, cpf, valor, telefone) {
-  try {
-    // 1. Buscar ou criar cliente
-    const busca = await fetch(`${ASAAS_URL}/customers?cpfCnpj=${cpf.replace(/\D/g,"")}`, {
-      headers: { "access_token": ASAAS_KEY }
-    }).then(r=>r.json());
-
-    let customerId;
-    if (busca.data?.length > 0) {
-      customerId = busca.data[0].id;
-    } else {
-      const novo = await fetch(`${ASAAS_URL}/customers`, {
-        method: "POST",
-        headers: { "Content-Type":"application/json", "access_token": ASAAS_KEY },
-        body: JSON.stringify({ name: nome, cpfCnpj: cpf.replace(/\D/g,""), mobilePhone: telefone.replace(/\D/g,"") })
-      }).then(r=>r.json());
-      customerId = novo.id;
-    }
-
-    // 2. Criar cobrança Pix
-    const cobranca = await fetch(`${ASAAS_URL}/payments`, {
-      method: "POST",
-      headers: { "Content-Type":"application/json", "access_token": ASAAS_KEY },
-      body: JSON.stringify({
-        customer: customerId,
-        billingType: "PIX",
-        value: valor,
-        dueDate: new Date(Date.now()+24*60*60*1000).toISOString().split("T")[0],
-        description: valor==50 ? "Diagnóstico de CPF - JustHelp" : "Entrada Processo - JustHelp",
-        externalReference: telefone
-      })
-    }).then(r=>r.json());
-
-    // 3. Pegar QR Code Pix
-    const qrData = await fetch(`${ASAAS_URL}/payments/${cobranca.id}/pixQrCode`, {
-      headers: { "access_token": ASAAS_KEY }
-    }).then(r=>r.json());
-
-    return { id: cobranca.id, link: cobranca.invoiceUrl, payload: qrData.payload, success: true };
-  } catch(e) {
-    console.error("Asaas erro:", e.message);
-    return { success: false };
-  }
-}
-
-// ─────────────────────────────────────────────────────────────
 //  ESTADO
 // ─────────────────────────────────────────────────────────────
 async function get(id)    { try{return(await redis.get(`c:${id}`))||novo();}catch{return novo();} }
 async function save(id,c) { try{await redis.set(`c:${id}`,c);}catch(e){console.error("redis:",e.message);} }
-function novo() { return { etapa:0, nome:"", cpf:"", dados:"", modoHumano:false, pagos:[], cobrancaId50:"", cobrancaId250:"" }; }
+function novo() { return { etapa:0, nome:"", cpf:"", dados:"", modoHumano:false }; }
 
 function getId(body) {
   const phone  = (body.phone  ||"").toString().trim();
@@ -240,11 +188,8 @@ const M = {
   enviar_pix50_manual: (url)=>
     `Perfeito! Preparei tudo pra você. 🖥️\n\n*Valor:* R$ 50\n\n👇 *Clique aqui para pagar (QR Code + Copia e Cola):*\n${url}\n\nAssim que confirmar o pagamento, é só me enviar qualquer mensagem ou o comprovante aqui. 📸`,
 
-  enviar_pix50_asaas: (link)=>
-    `Perfeito! Preparei sua cobrança. 🖥️\n\n*Valor:* R$ 50\n\n👇 *Clique aqui para pagar:*\n${link}\n\nO sistema confirma o pagamento automaticamente assim que cair. 😊`,
-
   aguardando_pix50: ()=>
-    `Aguardando confirmação do seu pagamento... ⏳\n\nSe já pagou, é só me enviar o comprovante aqui que eu confirmo na hora! 📸`,
+    `Aguardando seu comprovante... ⏳\n\nAssim que pagar, é só me enviar a imagem ou print aqui! 📸`,
 
   // ── DIAGNÓSTICO AUTOMÁTICO ───────────────────────────────────
   analisando_1: (n)=>
@@ -291,11 +236,8 @@ const M = {
   enviar_pix250_manual: (url)=>
     `Ótima decisão, vamos lá! 🎉\n\n*Entrada: R$ 250*\n\n👇 *Clique aqui para pagar (QR Code + Copia e Cola):*\n${url}\n\nAssim que confirmar, me envia o comprovante aqui. 📸`,
 
-  enviar_pix250_asaas: (link)=>
-    `Ótima decisão, vamos lá! 🎉\n\n*Entrada: R$ 250*\n\n👇 *Clique aqui para pagar:*\n${link}\n\nO sistema confirma automaticamente. 😊`,
-
   aguardando_pix250: ()=>
-    `Aguardando confirmação do seu pagamento... ⏳\n\nSe já pagou, é só me enviar o comprovante aqui! 📸`,
+    `Aguardando seu comprovante... ⏳\n\nAssim que pagar, é só me enviar a imagem ou print aqui! 📸`,
 
   // ── FASE 5: Documentos para contrato ────────────────────────
   pedir_rg: (n)=>
@@ -354,18 +296,9 @@ const M = {
 };
 
 // ─────────────────────────────────────────────────────────────
-//  ENVIO DE PIX (Asaas ou manual)
+//  ENVIO DE PIX (manual)
 // ─────────────────────────────────────────────────────────────
 async function enviarPix(valor, contato, id, res) {
-  if (USE_ASAAS) {
-    const cobranca = await criarCobrancaAsaas(contato.nome, contato.cpf, valor, id);
-    if (cobranca.success) {
-      if (valor === 50)  contato.cobrancaId50  = cobranca.id;
-      if (valor === 250) contato.cobrancaId250 = cobranca.id;
-      return { reply: valor===50 ? M.enviar_pix50_asaas(cobranca.link) : M.enviar_pix250_asaas(cobranca.link) };
-    }
-  }
-  // fallback manual
   const url = `${BASE_URL}/pix/${valor}`;
   return { reply: valor===50 ? M.enviar_pix50_manual(url) : M.enviar_pix250_manual(url) };
 }
@@ -401,7 +334,7 @@ app.post("/webhook", async (req, res) => {
     }
     // Reinício — qualquer msg nova quando fluxo acabou, ou saudação
     if (etapa===0 || etapa===17 || isOi(rawMsg)) {
-      Object.assign(c,{etapa:1,nome:"",cpf:"",dados:"",cobrancaId50:"",cobrancaId250:"",pagos:[],modoHumano:false});
+      Object.assign(c,{etapa:1,nome:"",cpf:"",dados:"",modoHumano:false});
       await save(id,c);
       return res.json({ reply: M.inicio() });
     }
@@ -714,39 +647,6 @@ app.post("/webhook", async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────
-//  WEBHOOK ASAAS — confirmação automática de pagamento
-// ─────────────────────────────────────────────────────────────
-app.post("/asaas-webhook", async (req,res) => {
-  try {
-    const { event, payment } = req.body;
-    console.log("Asaas evento:", event, payment?.id);
-    if (event !== "PAYMENT_RECEIVED" && event !== "PAYMENT_CONFIRMED") return res.json({ok:true});
-
-    const telefone = payment?.externalReference;
-    if (!telefone) return res.json({ok:true});
-
-    const c = await get(telefone);
-    if (!c) return res.json({ok:true});
-
-    // Determina qual pagamento foi confirmado
-    if (payment.id === c.cobrancaId50 && c.etapa===8) {
-      c.etapa=9;
-      await save(telefone,c);
-      console.log(`✅ Pix R$50 confirmado para ${telefone}`);
-    } else if (payment.id === c.cobrancaId250 && c.etapa===13) {
-      c.etapa=14;
-      await save(telefone,c);
-      console.log(`✅ Pix R$250 confirmado para ${telefone}`);
-    }
-
-    res.json({ok:true});
-  } catch(e) {
-    console.error("Asaas webhook erro:",e.message);
-    res.json({ok:true});
-  }
-});
-
-// ─────────────────────────────────────────────────────────────
 //  REATIVAÇÃO — respostas ao menu de reativação
 // ─────────────────────────────────────────────────────────────
 app.post("/reativar", async (req,res) => {
@@ -817,7 +717,7 @@ app.get("/pix/:valor", async (req,res) => {
 // ─────────────────────────────────────────────────────────────
 app.get("/debug", async (req,res) => {
   const rok=await redis.ping().then(()=>true).catch(()=>false);
-  res.json({status:"ok",redis:rok,asaas:USE_ASAAS,baseUrl:BASE_URL,node:process.version});
+  res.json({status:"ok",redis:rok,baseUrl:BASE_URL,node:process.version});
 });
 app.post("/assumir", async (req,res) => {const c=await get(req.body.telefone);c.modoHumano=true; await save(req.body.telefone,c);res.json({ok:true});});
 app.post("/liberar", async (req,res) => {const c=await get(req.body.telefone);c.modoHumano=false;await save(req.body.telefone,c);res.json({ok:true});});
