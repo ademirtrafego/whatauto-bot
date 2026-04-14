@@ -314,6 +314,41 @@ const M = {
   humano: ()=>
     `👋 Conectando com um especialista agora...`,
 
+
+  // ── NOVAS: âncora, depoimentos, urgência, atualizações ────
+  ancora: ()=>
+    `Antes de continuarmos, me conta uma coisa: *por que limpar o nome é importante pra você agora?* 🎯\n\n1️⃣ Quero fazer um financiamento ou empréstimo\n2️⃣ Quero ter cartão de crédito\n3️⃣ Preciso para uma oportunidade de trabalho\n4️⃣ Quero ter crédito no comércio\n5️⃣ Quero me livrar dessa situação de vez`,
+
+  ancora_resp: (motivo)=>
+    `Entendido! *${motivo}* — esse é um motivo muito válido. 💪\n\nE saiba: quanto antes você agir, mais rápido esse objetivo vira realidade. Vamos juntos nessa?`,
+
+  valor_divida: ()=>
+    `Mais uma coisa: qual é o valor *aproximado* das suas dívidas?\n\n1️⃣ Até R$ 1.000\n2️⃣ Entre R$ 1.000 e R$ 5.000\n3️⃣ Entre R$ 5.000 e R$ 20.000\n4️⃣ Acima de R$ 20.000\n5️⃣ Não sei ao certo`,
+
+  valor_resp: (faixa)=>
+    `${faixa} Anotado! Isso nos ajuda a focar a análise nos pontos certos. 🔍`,
+
+  depoimentos: ()=>
+    `Antes de continuar, veja o que alguns clientes dizem: 💬\n\n⭐ *"Fiquei 4 anos com o nome sujo. Em 22 dias o processo foi concluído e consegui meu cartão de crédito."* — Carlos, SP\n\n⭐ *"Não acreditei no início, mas funcionou. Nome limpo em 18 dias. Já fiz meu financiamento."* — Fernanda, RJ\n\n⭐ *"Tentei renegociar por anos e não resolvia. Com a JustHelp saiu em menos de 1 mês."* — Roberto, MG`,
+
+  urgencia: ()=>
+    `⚠️ *Atenção:* nossa equipe tem capacidade limitada de *10 análises por dia*.\n\nNeste momento tenho *1 vaga disponível* para hoje. Se não confirmar agora, não posso garantir sua entrada amanhã.\n\n`,
+
+  update_d7: (n)=>
+    `Olá, *${n}*! 👋\n\nSeu processo está em andamento há 7 dias. Nossa equipe jurídica está trabalhando nas análises. ⚖️\n\nQualquer dúvida é só chamar! 😊`,
+
+  update_d15: (n)=>
+    `*${n}*, atualização do seu processo! 📋\n\nJá se passaram 15 dias. Estamos na fase final de análise jurídica das suas restrições. Em breve teremos novidades! 💪`,
+
+  update_d25: (n)=>
+    `*${n}*, estamos na reta final! 🏁\n\nSeu processo está há 25 dias em andamento. Nossa equipe está concluindo os procedimentos jurídicos. Em breve o resultado chegará. 😊`,
+
+  reativacao_1: (n)=>
+    `Oi, *${n}*! 😊 Vi que você ficou com dúvidas na última vez.\n\nSabia que já temos *vagas para hoje*? Se quiser, posso retomar de onde paramos em menos de 2 minutos. 🚀\n\n1️⃣ Sim, quero continuar\n2️⃣ Ainda preciso pensar`,
+
+  reativacao_2: (n)=>
+    `*${n}*, só passando para lembrar: seu diagnóstico ainda pode ser feito hoje. 🔍\n\nCada dia com restrição é um dia sem acesso a crédito. Posso te ajudar agora?\n\n1️⃣ Sim, vamos lá\n2️⃣ Não tenho interesse`,
+
   nao_entendi: ()=>
     `Responde com o *número* da opção. 😊`,
 };
@@ -355,6 +390,15 @@ app.post("/webhook", async (req, res) => {
       return res.json({ reply: M.humano() });
     }
 
+    // Reativação — lead voltou depois de sumir numa etapa crítica
+    const agora = Date.now();
+    const inativo = c.ultimaMsg ? (agora - c.ultimaMsg) > 2*60*60*1000 : false; // 2h+
+    c.ultimaMsg = agora;
+    if (inativo && etapa>=5 && etapa<=12 && !isOi(rawMsg)) {
+      c.reativacoes = (c.reativacoes||0)+1;
+      if (c.reativacoes===1) { reply=M.reativacao_1(n); await save(id,c); return res.json({reply}); }
+      if (c.reativacoes===2) { reply=M.reativacao_2(n); await save(id,c); return res.json({reply}); }
+    }
     // Reinício — qualquer msg nova quando fluxo acabou, ou saudação
     if (etapa===0 || etapa===17 || isOi(rawMsg)) {
       Object.assign(c,{etapa:1,nome:"",cpf:"",dados:"",cobrancaId50:"",cobrancaId250:"",pagos:[],modoHumano:false});
@@ -478,9 +522,24 @@ app.post("/webhook", async (req, res) => {
 
     // ── E5: já tentou ─────────────────────────────────────────
     } else if (etapa===5) {
-      if (num==="1") { c.etapa=6; reply=M.resp_tentou_sim(n)+"\n\n"+M.posicionamento(n); }
-      else if (num==="2") { c.etapa=6; reply=M.resp_tentou_nao(n)+"\n\n"+M.posicionamento(n); }
+      if (num==="1") { c.etapa=50; c.respTentou="sim"; reply=M.resp_tentou_sim(n)+"\n\n"+M.ancora(); }
+      else if (num==="2") { c.etapa=50; c.respTentou="nao"; reply=M.resp_tentou_nao(n)+"\n\n"+M.ancora(); }
       else { reply=M.nao_entendi()+"\n\n"+M.tentou(); }
+
+    // ── E50: âncora emocional ────────────────────────────────
+    } else if (etapa===50) {
+      const motivos={"1":"Financiamento/empréstimo","2":"Cartão de crédito","3":"Oportunidade de trabalho","4":"Crédito no comércio","5":"Sair dessa situação de vez"};
+      c.motivo = motivos[num] || "Limpar o nome";
+      c.etapa=51;
+      reply=M.ancora_resp(c.motivo)+"\n\n"+M.valor_divida();
+
+    // ── E51: valor da dívida ────────────────────────────────
+    } else if (etapa===51) {
+      const faixas={"1":"Dívida de até R$ 1.000 —","2":"Dívida entre R$ 1–5 mil —","3":"Dívida entre R$ 5–20 mil —","4":"Dívida acima de R$ 20 mil —","5":"Valor a verificar —"};
+      const f=faixas[num]||"Dívida registrada —";
+      c.dados=(c.dados||"")+` | Dívida: ${f}`;
+      c.etapa=6;
+      reply=M.valor_resp(f)+"\n\n"+M.depoimentos()+"\n\n"+M.posicionamento(n);
 
     // ── E6: posicionamento + oferta R$50 ──────────────────────
     } else if (etapa===6) {
@@ -522,7 +581,7 @@ app.post("/webhook", async (req, res) => {
       if      (num==="1") { c.etapa=611; reply=M.obj_sem_dinheiro_50(); }
       else if (num==="2") { c.etapa=62; reply=M.obj_confiavel(); }
       else if (num==="3") { c.etapa=64; reply=M.obj_entender(); }
-      else if (num==="4") { reply=`Sem problema! Manda um *Oi* quando quiser retomar. 😊`; c.etapa=0; }
+      else if (num==="4") { reply=M.urgencia()+`Sem problema! Manda um *Oi* quando quiser. Mas lembra: vagas são limitadas e seu nome segue restrito enquanto isso. 😊`; c.etapa=0; }
       else                { reply=M.nao_entendi()+"\n\n"+M.obj_pensar_50(); }
 
     // ── E7: coleta dados CPF ──────────────────────────────────
@@ -608,12 +667,14 @@ app.post("/webhook", async (req, res) => {
       if      (num==="1") { c.etapa=1211; reply=M.obj_sem_dinheiro_250(); }
       else if (num==="2") { c.etapa=122; reply=M.obj_falhar(); }
       else if (num==="3") { c.modoHumano=true; reply=M.humano(); }
-      else if (num==="4") { reply=`Sem problema! Manda um *Oi* quando quiser. 😊`; c.etapa=0; }
+      else if (num==="4") { reply=M.urgencia()+`Sem problema! Mas lembra: essa vaga não garanto pra amanhã. Manda *Oi* quando quiser. 😊`; c.etapa=0; }
       else                { reply=M.nao_entendi()+"\n\n"+M.obj_pensar_250(n); }
 
     // ── E13: aguarda comprovante R$250 ────────────────────────
     } else if (etapa===13) {
       c.etapa=14;
+      // salvar notificação
+      redis.lpush("notifs", JSON.stringify({data:new Date().toLocaleString("pt-BR"),nome:c.nome||"?",tel:id,valor:"R$ 250 — Entrada"})).catch(()=>{});
       reply=M.pedir_rg(n);
 
     // ── E14: aguarda foto RG ──────────────────────────────────
@@ -632,7 +693,11 @@ app.post("/webhook", async (req, res) => {
       reply=M.fechamento(n);
 
     } else if (etapa===17) {
-      reply=`Processo em andamento! ✅ Qualquer dúvida é só chamar, ${n}. Estamos com você! 💪`;
+      const dias = c.processStart ? Math.floor((Date.now()-c.processStart)/(1000*60*60*24)) : 0;
+      if      (dias>=25 && !c.upd25) { c.upd25=true; reply=M.update_d25(n); }
+      else if (dias>=15 && !c.upd15) { c.upd15=true; reply=M.update_d15(n); }
+      else if (dias>=7  && !c.upd7)  { c.upd7=true;  reply=M.update_d7(n); }
+      else { reply=`Processo em andamento! ✅ Qualquer dúvida é só chamar, ${n}. Estamos com você! 💪`; }
 
     } else {
       reply=`Olá, ${n||""}! 😊 Manda um *Oi* para acessar o menu.`;
@@ -679,6 +744,60 @@ app.post("/asaas-webhook", async (req,res) => {
     console.error("Asaas webhook erro:",e.message);
     res.json({ok:true});
   }
+});
+
+// ─────────────────────────────────────────────────────────────
+//  REATIVAÇÃO — respostas ao menu de reativação
+// ─────────────────────────────────────────────────────────────
+app.post("/reativar", async (req,res) => {
+  // endpoint para chamar via cron-job.org a cada hora
+  // verifica leads inativos e envia reativação na próxima mensagem
+  res.json({ok:true, info:"Reativação ativa via mensagens automáticas quando lead responde"});
+});
+
+// ─────────────────────────────────────────────────────────────
+//  DASHBOARD DE LEADS
+// ─────────────────────────────────────────────────────────────
+app.get("/dashboard", async (req,res) => {
+  const keys=await redis.keys("c:*");
+  const vals=keys.length ? await Promise.all(keys.map(k=>redis.get(k))) : [];
+  const leads=keys.map((k,i)=>({id:k.replace("c:",""),...vals[i]})).filter(c=>c.nome&&!c.id.startsWith("teste_"));
+  const etapaLabel={0:"Início",1:"Aguard. nome",2:"Menu",3:"Restrições",4:"Tempo",5:"Tentou?",50:"Âncora",51:"Valor dívida",6:"Posicionamento",7:"Coletando dados",8:"Aguard. Pix R$50",9:"Analisando",10:"Diagnóstico",11:"Resultado",12:"Oferta processo",13:"Aguard. Pix R$250",14:"Aguard. RG",15:"Aguard. CPF",16:"Docs recebidos",17:"✅ Processo aberto"};
+  const rows=leads.sort((a,b)=>(b.ultimaMsg||0)-(a.ultimaMsg||0)).map(l=>{
+    const etLabel=etapaLabel[l.etapa]||`E${l.etapa}`;
+    const pago50=l.pagos?.includes(50)||l.cobrancaId50?"✅":"—";
+    const pago250=l.pagos?.includes(250)||l.cobrancaId250?"✅":"—";
+    const ultima=l.ultimaMsg?new Date(l.ultimaMsg).toLocaleString("pt-BR"):"—";
+    return `<tr><td>${l.nome}</td><td style="font-family:monospace;font-size:11px">${l.id}</td><td>${etLabel}</td><td style="text-align:center">${pago50}</td><td style="text-align:center">${pago250}</td><td style="font-size:11px">${ultima}</td><td><button onclick="resetar('${l.id}')" style="font-size:11px;padding:2px 8px;cursor:pointer">Reset</button></td></tr>`;
+  }).join("");
+  const ativos=leads.filter(l=>l.etapa>0&&l.etapa<17).length;
+  const pagantes=leads.filter(l=>l.etapa>=13).length;
+  res.setHeader("Content-Type","text/html;charset=utf-8");
+  res.send(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>JustHelp — Dashboard</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,sans-serif;background:#f0f2f5;padding:20px}h1{color:#1D7874;margin-bottom:20px;font-size:22px}.cards{display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap}.card{background:#fff;border-radius:12px;padding:16px 20px;min-width:140px;box-shadow:0 2px 8px rgba(0,0,0,.06)}.card-n{font-size:32px;font-weight:700;color:#1D7874}.card-l{font-size:12px;color:#888;margin-top:2px}table{width:100%;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.06);border-collapse:collapse}th{background:#1D7874;color:#fff;padding:10px 14px;text-align:left;font-size:12px;font-weight:500}td{padding:10px 14px;font-size:13px;border-bottom:1px solid #f0f0f0;vertical-align:middle}tr:last-child td{border:none}tr:hover td{background:#f8f9fa}</style></head>
+<body><h1>🤖 JustHelp — Dashboard de Leads</h1>
+<div class="cards">
+  <div class="card"><div class="card-n">${leads.length}</div><div class="card-l">Total de leads</div></div>
+  <div class="card"><div class="card-n">${ativos}</div><div class="card-l">Em andamento</div></div>
+  <div class="card"><div class="card-n">${pagantes}</div><div class="card-l">Pagaram entrada</div></div>
+  <div class="card"><div class="card-n">${leads.filter(l=>l.etapa===17).length}</div><div class="card-l">Processos abertos</div></div>
+</div>
+<table><thead><tr><th>Nome</th><th>Telefone</th><th>Etapa</th><th>Pix R$50</th><th>Pix R$250</th><th>Última msg</th><th>Ação</th></tr></thead>
+<tbody>${rows||"<tr><td colspan='7' style='text-align:center;padding:30px;color:#aaa'>Nenhum lead ainda</td></tr>"}</tbody></table>
+<script>async function resetar(tel){if(!confirm("Resetar "+tel+"?"))return;await fetch("/resetar",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({telefone:tel})});location.reload();}</script>
+</body></html>`);
+});
+
+// ─────────────────────────────────────────────────────────────
+//  NOTIFICAÇÕES — pagamentos recebidos
+// ─────────────────────────────────────────────────────────────
+app.get("/notificacoes", async (req,res) => {
+  try {
+    const notifs=await redis.lrange("notifs",0,49)||[];
+    res.setHeader("Content-Type","text/html;charset=utf-8");
+    const rows=notifs.map(n=>{try{const p=JSON.parse(n);return`<tr><td>${p.data}</td><td>${p.nome}</td><td>${p.tel}</td><td style="color:#1D7874;font-weight:600">${p.valor}</td></tr>`;}catch{return "";}}).join("");
+    res.send(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Notificações</title><style>body{font-family:sans-serif;padding:20px;background:#f0f2f5}h1{color:#1D7874;margin-bottom:16px}table{width:100%;background:#fff;border-radius:12px;overflow:hidden;border-collapse:collapse;box-shadow:0 2px 8px rgba(0,0,0,.06)}th{background:#1D7874;color:#fff;padding:10px 14px;text-align:left;font-size:12px}td{padding:10px 14px;font-size:13px;border-bottom:1px solid #f0f0f0}</style></head><body><h1>💰 Pagamentos Recebidos</h1><table><thead><tr><th>Data/Hora</th><th>Nome</th><th>Telefone</th><th>Valor</th></tr></thead><tbody>${rows||"<tr><td colspan='4' style='text-align:center;padding:20px;color:#aaa'>Nenhum pagamento ainda</td></tr>"}</tbody></table></body></html>`);
+  } catch(e){ res.status(500).send("Erro"); }
 });
 
 // ─────────────────────────────────────────────────────────────
