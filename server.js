@@ -1,6 +1,6 @@
 const express = require("express");
 const { Redis } = require("@upstash/redis");
-const QRCode = require("qrcode");
+const QRCode   = require("qrcode");
 
 const app = express();
 app.use(express.json());
@@ -8,309 +8,361 @@ app.use(express.urlencoded({ extended: true }));
 
 // ── Credenciais ───────────────────────────────────────────────
 const redis = new Redis({
-  url: "https://gorgeous-warthog-98319.upstash.io",
+  url:   "https://gorgeous-warthog-98319.upstash.io",
   token: "gQAAAAAAAYAPAAIncDIwNjA2ZjEyZDUwZGQ0YTJmOGEyOWExMzk5ODIwOTI4MnAyOTgzMTk",
 });
-const DEEPSEEK_KEY = "sk-c05be12eec56495db38070240180103e";
 const BASE_URL = process.env.RAILWAY_PUBLIC_DOMAIN
   ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
   : process.env.BASE_URL || "https://whatauto-bot-production.up.railway.app";
 
-console.log("✅ Servidor iniciando | BASE_URL:", BASE_URL);
+console.log("✅ JustHelp Bot iniciando | BASE_URL:", BASE_URL);
 
-// ─────────────────────────────────────────────────────────────
-//  PIX QR CODE
-// ─────────────────────────────────────────────────────────────
-function pixField(id, value) {
-  return `${id}${String(value.length).padStart(2,"0")}${value}`;
+// ── Pix ───────────────────────────────────────────────────────
+function pf(id, v) { return `${id}${String(v.length).padStart(2,"0")}${v}`; }
+function pcrc(s) {
+  let c = 0xFFFF;
+  for (let i=0;i<s.length;i++){c^=s.charCodeAt(i)<<8;for(let j=0;j<8;j++)c=(c&0x8000)?((c<<1)^0x1021):(c<<1);}
+  return (c&0xFFFF).toString(16).toUpperCase().padStart(4,"0");
 }
-function pixCRC16(str) {
-  let crc = 0xFFFF;
-  for (let i = 0; i < str.length; i++) {
-    crc ^= str.charCodeAt(i) << 8;
-    for (let j = 0; j < 8; j++) crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) : (crc << 1);
-  }
-  return (crc & 0xFFFF).toString(16).toUpperCase().padStart(4,"0");
+function pixPayload(valor) {
+  const ma = pf("00","BR.GOV.BCB.PIX")+pf("01","justhelpadv@gmail.com");
+  const ad = pf("05","JUSTHELPADV");
+  const p  = pf("00","01")+pf("01","12")+pf("26",ma)+pf("52","0000")+pf("53","986")
+           + pf("54",Number(valor).toFixed(2))+pf("58","BR")+pf("59","JustHelp Adv")
+           + pf("60","Sao Paulo")+pf("62",ad)+"6304";
+  return p+pcrc(p);
 }
-function gerarPixPayload(valor) {
-  const chave = "justhelpadv@gmail.com";
-  const nome  = "JustHelp Adv";
-  const cidade = "Sao Paulo";
-  const mercAcc = pixField("00","BR.GOV.BCB.PIX") + pixField("01", chave);
-  const addData = pixField("05","JUSTHELPADV");
-  const p =
-    pixField("00","01") + pixField("01","12") + pixField("26", mercAcc) +
-    pixField("52","0000") + pixField("53","986") +
-    pixField("54", Number(valor).toFixed(2)) +
-    pixField("58","BR") + pixField("59", nome) + pixField("60", cidade) +
-    pixField("62", addData) + "6304";
-  return p + pixCRC16(p);
-}
-async function gerarPaginaPix(valor) {
-  const payload   = gerarPixPayload(valor);
-  const qrDataUrl = await QRCode.toDataURL(payload, { width: 280, margin: 2 });
-  const label     = valor == 50 ? "Diagnóstico de CPF" : "Entrada — Restauração de Crédito";
-  return `<!DOCTYPE html><html lang="pt-BR"><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+async function paginaPix(valor) {
+  const code = pixPayload(valor);
+  const qr   = await QRCode.toDataURL(code, { width:260, margin:2 });
+  const label = valor==50 ? "Diagnóstico de CPF" : "Entrada — Restauração de Crédito";
+  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Pagar R$ ${Number(valor).toFixed(2).replace(".",",")} — JustHelp</title>
 <style>*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f2f5;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
-.card{background:#fff;border-radius:20px;padding:32px 24px;max-width:380px;width:100%;box-shadow:0 4px 24px rgba(0,0,0,.08);text-align:center}
-.logo{background:#1D7874;color:#fff;border-radius:12px;padding:10px 20px;display:inline-block;font-weight:700;font-size:18px;margin-bottom:20px}
-.valor{font-size:38px;font-weight:700;color:#1D7874;margin-bottom:4px}
-.label{color:#888;font-size:14px;margin-bottom:24px}
-.qr{background:#f8f9fa;border-radius:16px;padding:16px;display:inline-block;margin-bottom:20px}
-.qr img{display:block;width:240px;height:240px}
-.steps{text-align:left;margin-bottom:20px}
-.step{display:flex;align-items:flex-start;gap:12px;padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:14px;color:#444}
+body{font-family:-apple-system,sans-serif;background:#f0f2f5;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
+.card{background:#fff;border-radius:20px;padding:28px 22px;max-width:360px;width:100%;text-align:center}
+.logo{background:#1D7874;color:#fff;border-radius:10px;padding:8px 18px;display:inline-block;font-weight:700;font-size:17px;margin-bottom:16px}
+.valor{font-size:36px;font-weight:700;color:#1D7874;margin-bottom:2px}
+.sub{color:#888;font-size:13px;margin-bottom:20px}
+.qr{background:#f8f9fa;border-radius:14px;padding:14px;display:inline-block;margin-bottom:18px}
+.qr img{display:block;width:230px;height:230px}
+.steps{text-align:left;margin-bottom:16px}
+.step{display:flex;gap:10px;padding:7px 0;border-bottom:1px solid #f0f0f0;font-size:13px;color:#444}
 .step:last-child{border:none}
-.n{background:#1D7874;color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;margin-top:1px}
-.copia{background:#f8f9fa;border-radius:12px;padding:12px;font-family:monospace;font-size:11px;color:#333;word-break:break-all;margin-bottom:12px;text-align:left;line-height:1.5}
-.btn{width:100%;padding:16px;border-radius:12px;border:none;font-size:16px;font-weight:700;cursor:pointer;background:#1D7874;color:#fff;margin-bottom:10px}
-.btn.ok{background:#22c55e}
-.aviso{font-size:12px;color:#aaa;margin-top:16px}</style></head>
+.n{background:#1D7874;color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px}
+.copia{background:#f8f9fa;border-radius:10px;padding:10px;font-family:monospace;font-size:10px;color:#333;word-break:break-all;margin-bottom:10px;text-align:left;line-height:1.5}
+.btn{width:100%;padding:14px;border-radius:10px;border:none;font-size:15px;font-weight:700;cursor:pointer;background:#1D7874;color:#fff}
+.ok{background:#22c55e}
+.aviso{font-size:11px;color:#aaa;margin-top:14px}</style></head>
 <body><div class="card">
 <div class="logo">JustHelp</div>
 <div class="valor">R$ ${Number(valor).toFixed(2).replace(".",",")}</div>
-<div class="label">${label}</div>
-<div class="qr"><img src="${qrDataUrl}" alt="QR Code Pix"></div>
+<div class="sub">${label}</div>
+<div class="qr"><img src="${qr}" alt="QR Code Pix"></div>
 <div class="steps">
-<div class="step"><span class="n">1</span><span>Abra seu banco ou app de pagamentos</span></div>
-<div class="step"><span class="n">2</span><span>Escolha <strong>Pix → Ler QR Code</strong> ou <strong>Copia e Cola</strong></span></div>
+<div class="step"><span class="n">1</span><span>Abra seu banco ou app</span></div>
+<div class="step"><span class="n">2</span><span>Pix → <strong>QR Code</strong> ou <strong>Copia e Cola</strong></span></div>
 <div class="step"><span class="n">3</span><span>Escaneie ou cole o código abaixo</span></div>
 </div>
-<div class="copia" id="cod">${payload}</div>
-<button class="btn" id="btn" onclick="copiar()">📋 Copiar código Pix</button>
-<div class="aviso">⚠️ Após pagar, envie o comprovante no WhatsApp para confirmar.</div>
+<div class="copia" id="cod">${code}</div>
+<button class="btn" id="btn" onclick="copy()">📋 Copiar código Pix</button>
+<div class="aviso">⚠️ Após pagar, envie o comprovante no WhatsApp.</div>
 </div>
-<script>function copiar(){navigator.clipboard.writeText(document.getElementById('cod').textContent).then(()=>{const b=document.getElementById('btn');b.textContent='✅ Copiado!';b.classList.add('ok');setTimeout(()=>{b.textContent='📋 Copiar código Pix';b.classList.remove('ok')},3000)})}</script>
+<script>function copy(){navigator.clipboard.writeText(document.getElementById('cod').textContent).then(()=>{const b=document.getElementById('btn');b.textContent='✅ Copiado!';b.classList.add('ok');setTimeout(()=>{b.textContent='📋 Copiar código Pix';b.classList.remove('ok')},3000)})}</script>
 </body></html>`;
 }
 
-// ─────────────────────────────────────────────────────────────
-//  ESTADO
-// ─────────────────────────────────────────────────────────────
-async function getContato(id) {
-  try { return (await redis.get(`c:${id}`)) || { etapa:0, nome:"", dados:"", historico:[], modoHumano:false }; }
-  catch(e) { console.error("Redis get:",e.message); return { etapa:0, nome:"", dados:"", historico:[], modoHumano:false }; }
+// ── Estado ────────────────────────────────────────────────────
+async function get(id)    { try{return(await redis.get(`c:${id}`))||novo();}catch{return novo();} }
+async function save(id,c) { try{await redis.set(`c:${id}`,c);}catch(e){console.error("redis:",e.message);} }
+function novo() { return { etapa:0, nome:"", dados:"", modoHumano:false }; }
+
+function getId(body) {
+  const phone  = (body.phone  ||"").toString().trim();
+  const sender = (body.sender ||"").toString().trim();
+  if (phone  && phone  !=="WhatsAuto app" && /\d/.test(phone))  return phone;
+  if (sender && sender !=="WhatsAuto app" && sender !=="") return sender;
+  return "teste";
 }
-async function salvarContato(id, c) {
-  try { await redis.set(`c:${id}`, c); }
-  catch(e) { console.error("Redis set:",e.message); }
-}
-function identificarContato(body) {
-  const phone  = (body.phone  || "").toString().trim();
-  const sender = (body.sender || "").toString().trim();
-  console.log(`📱 phone="${phone}" sender="${sender}"`);
-  if (phone  && phone  !== "WhatsAuto app" && /\d/.test(phone))  return phone;
-  if (sender && sender !== "WhatsAuto app" && sender !== "") return sender;
-  return `teste_${Date.now()}`;
-}
-function capitalizarNome(t) {
+function nome(t) {
   return t.trim().split(" ").map(p=>p.charAt(0).toUpperCase()+p.slice(1).toLowerCase()).join(" ");
 }
-function ehSaudacao(msg) {
-  return /^(oi|ol[aá]|oii+|boa|bom dia|boa tarde|boa noite|hello|hi|hey|e a[íi]|tudo bem|opa|salve|boas|al[oô])[\s!?.]*$/i.test(msg.trim());
+function isOi(msg) {
+  return /^(oi|ol[aá]|oii+|bom dia|boa tarde|boa noite|hello|hi|opa|salve|al[oô]|inicio|start|menu|começar|comecar)[\s!?.]*$/i.test(msg.trim());
 }
-function ehComprovante(msg) {
-  if (!msg || msg.trim()==="") return true;
-  return /paguei|pago|fiz o? ?pix|transferi|enviado|efetuado|feito|realizei|conclu[íi]do|t[aá] aqui|pronto|segue|comprovante|print/i.test(msg);
+function isComprovante(msg) {
+  if (!msg||msg.trim()==="") return true;
+  return /paguei|pago|fiz|transferi|enviado|efetuado|feito|realizei|pronto|segue|comprovante|print|t[aá] aqui/i.test(msg);
 }
 
 // ─────────────────────────────────────────────────────────────
-//  DEEPSEEK
+//  MENUS
 // ─────────────────────────────────────────────────────────────
-const SYSTEM_PROMPT = `Você é o agente virtual da JustHelp Assessoria Jurídica, especializado em restauração de crédito no WhatsApp.
+const M = {
 
-SOBRE A JUSTHELP:
-- Escritório jurídico. NÃO fazemos renegociação. Fazemos análise jurídica para remover restrições por irregularidades
-- Trabalhamos com ética e transparência total
+  inicio: () =>
+    `Opa, tudo bem? 😊\n\nAntes de começarmos, me fala seu *nome* para eu te atender melhor.`,
 
-PREÇOS:
-- Diagnóstico CPF: R$ 50 (abatido se seguir com processo)
-- Entrada do processo: R$ 250
-- Taxa de êxito: R$ 450 (SOMENTE após resultado comprovado)
+  menu_principal: (n) =>
+    `Prazer, *${n}*! 😊\n\nComo posso te ajudar hoje?\n\n1️⃣ Quero limpar meu nome\n2️⃣ Entender como funciona\n3️⃣ Já sei o que quero, quero começar`,
 
-FLUXO EM ORDEM:
-1. Pergunte o nome do cliente
-2. Pergunte a situação: sabe as pendências ou quer entender o processo?
-3. Qualificação: onde estão as restrições, há quanto tempo, já tentou resolver?
-4. Posicionamento: explique que somos diferentes (análise jurídica, não renegociação)
-5. Oferte diagnóstico R$50 e peça aceite
-6. Colete nome completo e CPF
-7. Envie link Pix para R$50: ${BASE_URL}/pix/50 — use acao: "aguardar_pix_50"
-8. (após comprovante) Entregue diagnóstico + apresente processo completo
-9. Oferte R$250 entrada + R$450 êxito, quebre objeções
-10. Envie link Pix para R$250: ${BASE_URL}/pix/250 — use acao: "aguardar_pix_250"
-11. (após comprovante) Confirme processo aberto
+  como_funciona: () =>
+    `Ótima pergunta! 😊\n\nNosso trabalho é *diferente* de uma renegociação:\n\n✅ Fazemos uma *análise jurídica* das suas dívidas\n✅ Identificamos irregularidades (juros abusivos, prazo vencido, cobranças indevidas)\n✅ Pedimos juridicamente a *remoção das restrições*\n\nNão pagamos sua dívida — encontramos os erros jurídicos dela.\n\nO que prefere?\n\n1️⃣ Quero fazer um diagnóstico do meu CPF\n2️⃣ Voltar ao menu`,
 
-OBJEÇÕES:
-- "É golpe" → Escritório registrado. R$50 é para ver viabilidade antes de gastar mais
-- "Não tenho R$50" → Menos que consulta médica. Volta abatido se seguir. Quando consegue?
-- "Preciso pensar" → O que está travando? Tiro a dúvida agora
-- "Já tentei" → Tentou renegociar? Nosso trabalho é jurídico, completamente diferente
-- "Muito caro" → Com nome limpo volta a ter crédito. R$450 só paga após resultado
-- "E se não funcionar" → R$450 SOMENTE se funcionar. Risco mínimo para você
-- "Quero falar com pessoa" → use acao: "humano"
+  onde_restricoes: () =>
+    `Entendido! Me conta: *onde estão suas restrições?*\n\n1️⃣ Serasa\n2️⃣ SPC\n3️⃣ Banco específico\n4️⃣ Cartório\n5️⃣ Não sei ao certo`,
 
-REGRAS:
-- Linguagem simples e próxima. Use o nome do cliente sempre
-- Mensagens curtas — é WhatsApp, não email
-- *negrito* para valores importantes. Emojis com moderação
-- Termine sempre com pergunta ou ação clara
-- Nunca pressione agressivamente
+  ja_tentou: () =>
+    `Certo! Você já tentou resolver antes?\n\n1️⃣ Sim, já tentei renegociar ou parcelar\n2️⃣ Não, é minha primeira vez buscando ajuda`,
 
-RESPONDA SOMENTE COM JSON VÁLIDO:
-{"resposta":"mensagem ao cliente","etapa":<1-11>,"acao":"continuar"|"humano"|"aguardar_pix_50"|"aguardar_pix_250"}`;
+  posicionamento: (n) =>
+    `${n}, entendo a situação. 💪\n\nMuita gente tenta renegociar e não resolve — porque a dívida continua lá.\n\nNosso trabalho é *jurídico*: analisamos se a dívida tem alguma irregularidade que permita a remoção. Muitas têm!\n\nO primeiro passo é um *diagnóstico completo do seu CPF* por apenas *R$ 50*.\n\nSe seguir com o processo completo, esse valor já vem *abatido*. 💡\n\nO que acha?\n\n1️⃣ Quero fazer o diagnóstico agora\n2️⃣ Tenho dúvidas sobre o valor\n3️⃣ Preciso pensar um pouco`,
 
-async function chamarIA(contato, msgCliente) {
-  const ctx = `Estado: nome="${contato.nome||"?"}" etapa=${contato.etapa}
-Histórico:\n${(contato.historico||[]).slice(-10).map(h=>`[${h.r==="c"?"CLIENTE":"BOT"}]: ${h.t}`).join("\n")}
-Nova mensagem: "${msgCliente}"`;
+  obj_valor: () =>
+    `Entendo a dúvida! Mas pensa comigo: 😊\n\n💡 R$ 50 é menos que uma consulta médica\n💡 Se não houver viabilidade, você *saberá antes* de gastar mais\n💡 Se seguir em frente, esse valor já vem *abatido* do total\n\nÉ o caminho mais inteligente antes de qualquer passo maior.\n\n1️⃣ Ok, vou fazer o diagnóstico\n2️⃣ Ainda tenho dúvidas`,
 
-  console.log(`🤖 DeepSeek — etapa=${contato.etapa} msg="${msgCliente.substring(0,60)}"`);
-  const ctrl = new AbortController();
-  const t = setTimeout(()=>ctrl.abort(), 20000);
-  try {
-    const r = await fetch("https://api.deepseek.com/chat/completions", {
-      method:"POST", signal:ctrl.signal,
-      headers:{"Content-Type":"application/json","Authorization":`Bearer ${DEEPSEEK_KEY}`},
-      body:JSON.stringify({ model:"deepseek-chat", max_tokens:500, temperature:0.7,
-        messages:[{role:"system",content:SYSTEM_PROMPT},{role:"user",content:ctx}]
-      })
-    });
-    clearTimeout(t);
-    if (!r.ok) { console.error("DeepSeek HTTP:",r.status, await r.text()); return null; }
-    const data = await r.json();
-    const raw  = data.choices?.[0]?.message?.content || "";
-    console.log("DeepSeek raw:", raw.substring(0,200));
-    return JSON.parse(raw.replace(/```json|```/g,"").trim());
-  } catch(e) { clearTimeout(t); console.error("DeepSeek erro:",e.message); return null; }
-}
+  obj_pensar: () =>
+    `Claro, sem pressão! 😊\n\nMas me conta: o que está te travando?\n\n1️⃣ Preocupado se é confiável\n2️⃣ Problema com o valor agora\n3️⃣ Quero entender melhor o processo\n4️⃣ Vou pensar e volto depois`,
+
+  obj_confiavel: () =>
+    `Entendo completamente — tem muita fraude por aí! 🙏\n\nSomos um *escritório jurídico registrado*. O diagnóstico de R$ 50 existe justamente para você ver a viabilidade *antes* de investir mais.\n\nSe não houver caminho, você saberá e não gasta mais nada. Nosso interesse é só atuar em casos viáveis.\n\n1️⃣ Faz sentido, vou fazer o diagnóstico\n2️⃣ Quero falar com um especialista`,
+
+  obj_sem_dinheiro: () =>
+    `Sem problema! R$ 50 pode parecer pouco, mas se não tiver agora, tudo bem. 😊\n\nQuando achar que é o momento certo, é só mandar um *Oi* aqui que retomamos.\n\n1️⃣ Na verdade consigo sim, vamos lá\n2️⃣ Vou guardar e volto em breve`,
+
+  coletar_dados: () =>
+    `Ótimo! 🎉 Já posso abrir o sistema.\n\nMe envia seu *nome completo* e *CPF* para preparar sua consulta. 📋`,
+
+  enviar_pix50: (url) =>
+    `Perfeito! Já estou com a tela aberta. 🖥️\n\n💳 *Valor:* R$ 50\n\n👇 *Clique para pagar (QR Code + Copia e Cola):*\n${url}\n\nAssim que pagar, me envia o comprovante aqui. 📸`,
+
+  confirmar_pix50: (n) =>
+    `Comprovante recebido! ✅ Obrigado, ${n}!\n\nJá iniciei sua análise... 🔍\n\n━━━━━━━━━━━━━━━\n📊 *RESULTADO DO DIAGNÓSTICO*\n━━━━━━━━━━━━━━━\n\nIdentificamos restrições no seu CPF com *viabilidade real* de atuação jurídica.\n\nO cenário é *favorável* para a restauração do seu crédito. ✅\n\nQuer que eu explique como funciona o processo completo?\n\n1️⃣ Sim, me conta!\n2️⃣ Tenho dúvidas`,
+
+  oferta_servico: (n) =>
+    `${n}, para darmos entrada e buscarmos a liberação do seu nome:\n\n✅ *Entrada:* R$ 250\n🏆 *Sucesso:* R$ 450 _(pago SOMENTE após o êxito)_\n🎁 *Bônus:* Os R$ 50 do diagnóstico já estão abatidos!\n\n⚠️ Se *não funcionar*, você *não paga* os R$ 450. Nosso risco é maior que o seu.\n\n1️⃣ Quero entrar no processo agora\n2️⃣ Tenho dúvidas sobre o valor\n3️⃣ E se não funcionar?\n4️⃣ Quanto tempo demora?`,
+
+  obj_caro: () =>
+    `Entendo! Mas pensa no cenário: 💪\n\nCom o nome limpo você volta a ter:\n✅ Cartão de crédito\n✅ Financiamentos\n✅ Crédito no mercado\n\nIsso vale muito mais que R$ 250. E os R$ 450 só pagam *quando o resultado aparecer*.\n\n1️⃣ Faz sentido, vou entrar\n2️⃣ Ainda não tenho o valor agora`,
+
+  obj_e_se_falhar: () =>
+    `Ótima pergunta! E a resposta é simples: 😊\n\n✅ Os R$ 450 de êxito são pagos *SOMENTE após o resultado*\n✅ Se não funcionar, você *não paga* esse valor\n✅ O risco real é nosso — só ganhamos se você ganhar\n\nNosso interesse é que funcione! 💪\n\n1️⃣ Entendi, quero entrar no processo\n2️⃣ Ainda tenho dúvidas`,
+
+  obj_tempo: () =>
+    `Boa pergunta! ⏱️\n\nA maioria dos casos tem resultado em *30 a 90 dias*.\nCasos mais simples: menos de 30 dias.\n\nAssim que você entrar, já começamos a contar. ⚡\n\n1️⃣ Ótimo, quero entrar agora\n2️⃣ Preciso pensar mais`,
+
+  enviar_pix250: (url) =>
+    `Perfeito! 🎉\n\n💳 *Entrada: R$ 250*\n\n👇 *Clique para pagar (QR Code + Copia e Cola):*\n${url}\n\nAssim que pagar, me envia o comprovante. 📸`,
+
+  confirmar_pix250: (n) =>
+    `Entrada confirmada! 🎉🎉\n\nObrigado, *${n}*! Seu processo foi *oficialmente aberto*.\n\nNossa equipe jurídica já está trabalhando no seu caso. 🏛️\n\nVocê receberá atualizações aqui mesmo. Qualquer dúvida é só chamar! 💪`,
+
+  humano: () =>
+    `Um momento! 👋 Vou te conectar com um dos nossos especialistas agora...`,
+
+  nao_entendi: () =>
+    `Não entendi. 😅 Por favor, responda com o *número* da opção desejada.`,
+};
 
 // ─────────────────────────────────────────────────────────────
 //  WEBHOOK
 // ─────────────────────────────────────────────────────────────
 app.post("/webhook", async (req, res) => {
-  console.log("\n━━━━ WEBHOOK ━━━━");
-  console.log("Body:", JSON.stringify(req.body).substring(0,200));
+  console.log("━━━━ MSG ━━━━", JSON.stringify(req.body).substring(0,150));
   try {
-    const id  = identificarContato(req.body);
-    const msg = (req.body.message || "").trim();
-    const contato = await getContato(id);
-    let { etapa, nome, historico=[], modoHumano } = contato;
+    const id      = getId(req.body);
+    const rawMsg  = (req.body.message || "").trim();
+    const msg     = rawMsg.toLowerCase();
+    const num     = rawMsg.replace(/[^0-9]/g,""); // extrai só o número
+    const c       = await get(id);
+    let { etapa, nome: n, modoHumano } = c;
 
     if (modoHumano) return res.json({ reply:"" });
 
-    // ── Início ou saudação ───────────────────────────────────
-    if (etapa === 0 || ehSaudacao(msg)) {
-      Object.assign(contato, { etapa:1, nome:"", dados:"", historico:[] });
-      await salvarContato(id, contato);
-      return res.json({ reply:"Opa, tudo bem? 😊\n\nAntes de começarmos, me fala seu *nome* para eu saber com quem estou conversando e te atender melhor." });
+    // Pedido de humano a qualquer momento
+    if (/humano|atendente|falar com (algu[eé]m|pessoa)|quero humano/i.test(msg)) {
+      c.modoHumano = true; await save(id,c);
+      return res.json({ reply: M.humano() });
     }
 
-    // ── Captura nome ─────────────────────────────────────────
+    // Reinício
+    if (etapa === 0 || isOi(rawMsg)) {
+      Object.assign(c, { etapa:1, nome:"", dados:"" });
+      await save(id,c);
+      return res.json({ reply: M.inicio() });
+    }
+
+    let reply = "";
+
+    // ── E1: captura nome ──────────────────────────────────────
     if (etapa === 1) {
-      nome = capitalizarNome(msg);
-      contato.nome = nome;
-      historico.push({r:"c",t:msg});
-      const ia = await chamarIA({...contato,etapa:2}, `Meu nome é ${nome}`);
-      const reply = ia?.resposta || `Prazer, *${nome}*! 😊\n\nMe conta sua situação: você já sabe quais pendências estão travando seu CPF ou quer entender como funciona nosso processo?`;
-      contato.etapa = ia?.etapa || 2;
-      historico.push({r:"b",t:reply});
-      contato.historico = historico.slice(-20);
-      await salvarContato(id, contato);
-      return res.json({ reply });
+      c.nome = nome(rawMsg); n = c.nome;
+      c.etapa = 2;
+      reply = M.menu_principal(n);
+
+    // ── E2: menu principal ────────────────────────────────────
+    } else if (etapa === 2) {
+      if      (num==="1") { c.etapa=3; reply = M.onde_restricoes(); }
+      else if (num==="2") { c.etapa=20; reply = M.como_funciona(); }
+      else if (num==="3") { c.etapa=3; reply = M.onde_restricoes(); }
+      else                { reply = M.nao_entendi() + "\n\n" + M.menu_principal(n); }
+
+    // ── E20: como funciona ────────────────────────────────────
+    } else if (etapa === 20) {
+      if      (num==="1") { c.etapa=3; reply = M.onde_restricoes(); }
+      else if (num==="2") { c.etapa=2; reply = M.menu_principal(n); }
+      else                { reply = M.nao_entendi() + "\n\n" + M.como_funciona(); }
+
+    // ── E3: onde estão restrições ─────────────────────────────
+    } else if (etapa === 3) {
+      if (["1","2","3","4","5"].includes(num)) {
+        const lugares = {1:"Serasa",2:"SPC",3:"banco",4:"cartório",5:"local não identificado"};
+        c.dados = `Restrição: ${lugares[num]||"?"}`;
+        c.etapa = 4;
+        reply = M.ja_tentou();
+      } else { reply = M.nao_entendi() + "\n\n" + M.onde_restricoes(); }
+
+    // ── E4: já tentou ─────────────────────────────────────────
+    } else if (etapa === 4) {
+      if (num==="1"||num==="2") { c.etapa=5; reply = M.posicionamento(n); }
+      else { reply = M.nao_entendi() + "\n\n" + M.ja_tentou(); }
+
+    // ── E5: posicionamento / oferta diagnóstico ───────────────
+    } else if (etapa === 5) {
+      if      (num==="1") { c.etapa=6; reply = M.coletar_dados(); }
+      else if (num==="2") { c.etapa=51; reply = M.obj_valor(); }
+      else if (num==="3") { c.etapa=52; reply = M.obj_pensar(); }
+      else                { reply = M.nao_entendi() + "\n\n" + M.posicionamento(n); }
+
+    // ── E51: objeção valor R$50 ───────────────────────────────
+    } else if (etapa === 51) {
+      if      (num==="1") { c.etapa=6; reply = M.coletar_dados(); }
+      else if (num==="2") { c.etapa=53; reply = M.obj_pensar(); }
+      else                { reply = M.nao_entendi() + "\n\n" + M.obj_valor(); }
+
+    // ── E52: objeção preciso pensar ───────────────────────────
+    } else if (etapa === 52) {
+      if      (num==="1") { c.etapa=53; reply = M.obj_confiavel(); }
+      else if (num==="2") { c.etapa=54; reply = M.obj_sem_dinheiro(); }
+      else if (num==="3") { c.etapa=20; reply = M.como_funciona(); }
+      else if (num==="4") { reply = `Tudo bem! Quando quiser, é só mandar um *Oi* que retomamos. 😊`; c.etapa=0; }
+      else                { reply = M.nao_entendi() + "\n\n" + M.obj_pensar(); }
+
+    // ── E53: objeção confiabilidade ───────────────────────────
+    } else if (etapa === 53) {
+      if      (num==="1") { c.etapa=6; reply = M.coletar_dados(); }
+      else if (num==="2") { c.modoHumano=true; reply = M.humano(); }
+      else                { reply = M.nao_entendi() + "\n\n" + M.obj_confiavel(); }
+
+    // ── E54: objeção sem dinheiro agora ───────────────────────
+    } else if (etapa === 54) {
+      if      (num==="1") { c.etapa=6; reply = M.coletar_dados(); }
+      else if (num==="2") { reply = `Perfeito! Quando estiver pronto, é só mandar *Oi* aqui. 😊`; c.etapa=0; }
+      else                { reply = M.nao_entendi() + "\n\n" + M.obj_sem_dinheiro(); }
+
+    // ── E6: coleta dados CPF ──────────────────────────────────
+    } else if (etapa === 6) {
+      c.dados = rawMsg;
+      c.etapa = 7;
+      const url = `${BASE_URL}/pix/50`;
+      reply = M.enviar_pix50(url);
+
+    // ── E7: aguarda comprovante R$50 ──────────────────────────
+    } else if (etapa === 7) {
+      if (isComprovante(rawMsg)) {
+        c.etapa = 8;
+        reply = M.confirmar_pix50(n);
+      } else {
+        reply = `Ainda aguardando seu comprovante, ${n}. 😊\n\nQuando pagar, é só me enviar a imagem ou print aqui. 📸`;
+      }
+
+    // ── E8: resultado diagnóstico ─────────────────────────────
+    } else if (etapa === 8) {
+      if      (num==="1") { c.etapa=9; reply = M.oferta_servico(n); }
+      else if (num==="2") { c.etapa=53; reply = M.obj_confiavel(); }
+      else                { reply = M.nao_entendi() + "\n\n" + M.confirmar_pix50(n); }
+
+    // ── E9: oferta serviço completo ───────────────────────────
+    } else if (etapa === 9) {
+      if      (num==="1") { c.etapa=10; reply = M.enviar_pix250(`${BASE_URL}/pix/250`); }
+      else if (num==="2") { c.etapa=91; reply = M.obj_caro(); }
+      else if (num==="3") { c.etapa=92; reply = M.obj_e_se_falhar(); }
+      else if (num==="4") { c.etapa=93; reply = M.obj_tempo(); }
+      else                { reply = M.nao_entendi() + "\n\n" + M.oferta_servico(n); }
+
+    // ── E91: objeção caro / sem dinheiro ─────────────────────
+    } else if (etapa === 91) {
+      if      (num==="1") { c.etapa=10; reply = M.enviar_pix250(`${BASE_URL}/pix/250`); }
+      else if (num==="2") { reply = `Sem problema! Quando estiver pronto, manda um *Oi* aqui. 😊`; c.etapa=0; }
+      else                { reply = M.nao_entendi() + "\n\n" + M.obj_caro(); }
+
+    // ── E92: objeção e se falhar ──────────────────────────────
+    } else if (etapa === 92) {
+      if      (num==="1") { c.etapa=10; reply = M.enviar_pix250(`${BASE_URL}/pix/250`); }
+      else if (num==="2") { c.etapa=9; reply = M.oferta_servico(n); }
+      else                { reply = M.nao_entendi() + "\n\n" + M.obj_e_se_falhar(); }
+
+    // ── E93: objeção tempo ────────────────────────────────────
+    } else if (etapa === 93) {
+      if      (num==="1") { c.etapa=10; reply = M.enviar_pix250(`${BASE_URL}/pix/250`); }
+      else if (num==="2") { c.etapa=9; reply = M.oferta_servico(n); }
+      else                { reply = M.nao_entendi() + "\n\n" + M.obj_tempo(); }
+
+    // ── E10: aguarda comprovante R$250 ────────────────────────
+    } else if (etapa === 10) {
+      if (isComprovante(rawMsg)) {
+        c.etapa = 11;
+        reply = M.confirmar_pix250(n);
+      } else {
+        reply = `Ainda aguardando seu comprovante, ${n}. 😊\n\n👇 Link para pagar:\n${BASE_URL}/pix/250`;
+      }
+
+    // ── E11: processo aberto ──────────────────────────────────
+    } else if (etapa === 11) {
+      reply = `Processo em andamento! ✅ Nossa equipe jurídica está trabalhando, ${n}. Qualquer novidade aviso aqui! 💪`;
+
+    } else {
+      reply = `Oi, ${n}! 😊 Manda um *Oi* para acessar o menu.`;
     }
 
-    // ── Comprovante R$50 ─────────────────────────────────────
-    if (etapa === 7 && ehComprovante(msg)) {
-      historico.push({r:"c",t:"[comprovante pix R$50]"});
-      const ia = await chamarIA({...contato,etapa:8},"[cliente enviou comprovante do pix de R$50]");
-      const reply = ia?.resposta || `Comprovante recebido! ✅ Obrigado, ${nome}!\n\nJá analisei seu CPF. Identificamos restrições com *viabilidade real* de remoção jurídica. O cenário é favorável! ✅\n\nQuer entender como funciona o processo completo?`;
-      contato.etapa = ia?.etapa || 8;
-      historico.push({r:"b",t:reply});
-      contato.historico = historico.slice(-20);
-      await salvarContato(id, contato);
-      return res.json({ reply });
-    }
-
-    // ── Comprovante R$250 ────────────────────────────────────
-    if (etapa === 10 && ehComprovante(msg)) {
-      historico.push({r:"c",t:"[comprovante pix R$250]"});
-      const ia = await chamarIA({...contato,etapa:11},"[cliente enviou comprovante do pix de R$250]");
-      const reply = ia?.resposta || `Entrada confirmada! 🎉 Obrigado, ${nome}!\n\nSeu processo foi aberto. Nossa equipe jurídica já está trabalhando no seu caso. Você receberá atualizações aqui! 💪`;
-      contato.etapa = ia?.etapa || 11;
-      historico.push({r:"b",t:reply});
-      contato.historico = historico.slice(-20);
-      await salvarContato(id, contato);
-      return res.json({ reply });
-    }
-
-    // ── IA cuida de tudo o mais ──────────────────────────────
-    historico.push({r:"c",t:msg});
-    const ia = await chamarIA(contato, msg);
-
-    const fallbacks = {
-      2:`Entendido! E você sabe onde estão essas restrições? (Serasa, SPC, algum banco?)`,
-      3:`Certo, ${nome}. Nosso trabalho é diferente: fazemos análise jurídica para encontrar *irregularidades* nas dívidas e pedir a remoção. Quer entender melhor?`,
-      4:`Para verificar se seu caso tem viabilidade, faço um diagnóstico completo do seu CPF por *R$ 50*. Se seguir com o processo, esse valor já vem abatido. O que acha?`,
-      5:`Ótimo! Me envia seu *nome completo* e *CPF* para preparar a consulta. 📋`,
-      6:`Perfeito! Segue o link para pagamento:\n\n👇 ${BASE_URL}/pix/50\n\nAssim que pagar, me envia o comprovante. 📸`,
-      8:`Para darmos entrada:\n\n✅ *Entrada:* R$ 250\n🏆 *Sucesso:* R$ 450 _(somente após êxito)_\n🎁 Os R$ 50 já abatidos!\n\nPosso seguir?`,
-      9:`Perfeito! Segue o link:\n\n👇 ${BASE_URL}/pix/250\n\nAssim que pagar, me envia o comprovante. 📸`,
-    };
-    let reply = ia?.resposta || fallbacks[etapa] || "Desculpe, pode repetir?";
-
-    if (ia?.etapa && ia.etapa >= contato.etapa) contato.etapa = ia.etapa;
-    if (ia?.acao === "humano")           { contato.modoHumano = true; reply = "Um momento! 👋 Vou te conectar com um especialista agora..."; }
-    if (ia?.acao === "aguardar_pix_50")  { contato.etapa = 7;  if (!reply.includes("pix/50"))  reply += `\n\n👇 ${BASE_URL}/pix/50`; }
-    if (ia?.acao === "aguardar_pix_250") { contato.etapa = 10; if (!reply.includes("pix/250")) reply += `\n\n👇 ${BASE_URL}/pix/250`; }
-
-    historico.push({r:"b",t:reply});
-    contato.historico = historico.slice(-20);
-    await salvarContato(id, contato);
-    console.log(`✅ Reply: "${reply.substring(0,80)}"`);
+    await save(id, c);
+    console.log(`[${id}] E${etapa}→E${c.etapa} reply="${reply.substring(0,60)}"`);
     res.json({ reply });
 
   } catch(err) {
-    console.error("❌ Erro geral:", err.message);
+    console.error("❌ Erro:", err.message);
     res.status(200).json({ reply:"Desculpe, tive um problema técnico. Pode repetir?" });
   }
 });
 
-// ─────────────────────────────────────────────────────────────
-//  ROTAS
-// ─────────────────────────────────────────────────────────────
-app.get("/debug", async (req, res) => {
-  const redisOk = await redis.ping().then(()=>true).catch(()=>false);
-  const dsOk = await fetch("https://api.deepseek.com/chat/completions",{
-    method:"POST",
-    headers:{"Content-Type":"application/json","Authorization":`Bearer ${DEEPSEEK_KEY}`},
-    body:JSON.stringify({model:"deepseek-chat",max_tokens:5,messages:[{role:"user",content:"oi"}]})
-  }).then(r=>r.ok).catch(()=>false);
-  res.json({ status:"ok", redis:redisOk, deepseek:dsOk, baseUrl:BASE_URL, nodeVersion:process.version });
-});
-
-app.get("/pix/:valor", async (req, res) => {
+// ── Pix ───────────────────────────────────────────────────────
+app.get("/pix/:valor", async (req,res) => {
   try {
-    const valor = parseFloat(req.params.valor);
-    if (isNaN(valor)||valor<=0) return res.status(400).send("Valor inválido");
-    res.setHeader("Content-Type","text/html; charset=utf-8");
-    res.send(await gerarPaginaPix(valor));
+    const v = parseFloat(req.params.valor);
+    if (isNaN(v)||v<=0) return res.status(400).send("Valor inválido");
+    res.setHeader("Content-Type","text/html;charset=utf-8");
+    res.send(await paginaPix(v));
   } catch(e) { res.status(500).send("Erro: "+e.message); }
 });
 
-app.post("/assumir", async (req,res) => { const c=await getContato(req.body.telefone); c.modoHumano=true;  await salvarContato(req.body.telefone,c); res.json({ok:true}); });
-app.post("/liberar", async (req,res) => { const c=await getContato(req.body.telefone); c.modoHumano=false; await salvarContato(req.body.telefone,c); res.json({ok:true}); });
+// ── Debug ─────────────────────────────────────────────────────
+app.get("/debug", async (req,res) => {
+  const rok = await redis.ping().then(()=>true).catch(()=>false);
+  res.json({ status:"ok", redis:rok, baseUrl:BASE_URL, node:process.version });
+});
+
+// ── Admin ─────────────────────────────────────────────────────
+app.post("/assumir", async (req,res) => { const c=await get(req.body.telefone); c.modoHumano=true;  await save(req.body.telefone,c); res.json({ok:true}); });
+app.post("/liberar", async (req,res) => { const c=await get(req.body.telefone); c.modoHumano=false; await save(req.body.telefone,c); res.json({ok:true}); });
 app.post("/resetar", async (req,res) => { await redis.del(`c:${req.body.telefone}`); res.json({ok:true}); });
 app.get("/contatos", async (req,res) => {
   const keys = await redis.keys("c:*");
   if (!keys.length) return res.json([]);
   const vals = await Promise.all(keys.map(k=>redis.get(k)));
-  res.json(keys.map((k,i)=>({id:k.replace("c:",""),...vals[i]})).filter(c=>!c.id.startsWith("teste_")));
+  res.json(keys.map((k,i)=>({id:k.replace("c:",""),...vals[i]})));
 });
-app.get("/", (_,res) => res.send("🤖 JustHelp Bot v8 — Online ✅"));
+app.get("/", (_,res) => res.send("🤖 JustHelp Bot v9 — Online ✅"));
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`✅ JustHelp Bot v8 | porta ${PORT} | ${BASE_URL}`));
+app.listen(PORT, ()=>console.log(`✅ JustHelp Bot v9 | porta ${PORT}`));
