@@ -100,69 +100,71 @@ function isComprovante(msg) {
 //  MENUS
 // ─────────────────────────────────────────────────────────────
 const M = {
-
   inicio: () =>
-    `Opa, tudo bem? 😊\n\nAntes de começarmos, me fala seu *nome* para eu te atender melhor.`,
+    `Olá! 😊 Me fala seu *nome* pra começar.`,
 
   menu_principal: (n) =>
-    `Prazer, *${n}*! 😊\n\nComo posso te ajudar hoje?\n\n1️⃣ Quero limpar meu nome\n2️⃣ Entender como funciona\n3️⃣ Já sei o que quero, quero começar`,
+    `Oi, *${n}*! O que você precisa?\n\n1️⃣ Limpar meu nome\n2️⃣ Entender como funciona`,
 
   como_funciona: () =>
-    `Ótima pergunta! 😊\n\nNosso trabalho é *diferente* de uma renegociação:\n\n✅ Fazemos uma *análise jurídica* das suas dívidas\n✅ Identificamos irregularidades (juros abusivos, prazo vencido, cobranças indevidas)\n✅ Pedimos juridicamente a *remoção das restrições*\n\nNão pagamos sua dívida — encontramos os erros jurídicos dela.\n\nO que prefere?\n\n1️⃣ Quero fazer um diagnóstico do meu CPF\n2️⃣ Voltar ao menu`,
+    `Fazemos *análise jurídica* das dívidas — identificamos irregularidades e pedimos a remoção das restrições. Não renegociamos.\n\n1️⃣ Quero fazer diagnóstico do CPF\n2️⃣ Voltar`,
 
   onde_restricoes: () =>
-    `Entendido! Me conta: *onde estão suas restrições?*\n\n1️⃣ Serasa\n2️⃣ SPC\n3️⃣ Banco específico\n4️⃣ Cartório\n5️⃣ Não sei ao certo`,
+    `Onde estão suas restrições?\n\n1️⃣ Serasa\n2️⃣ SPC\n3️⃣ Banco\n4️⃣ Cartório\n5️⃣ Não sei`,
 
   ja_tentou: () =>
-    `Certo! Você já tentou resolver antes?\n\n1️⃣ Sim, já tentei renegociar ou parcelar\n2️⃣ Não, é minha primeira vez buscando ajuda`,
+    `Já tentou resolver antes?\n\n1️⃣ Sim\n2️⃣ Não`,
 
   posicionamento: (n) =>
-    `${n}, entendo a situação. 💪\n\nMuita gente tenta renegociar e não resolve — porque a dívida continua lá.\n\nNosso trabalho é *jurídico*: analisamos se a dívida tem alguma irregularidade que permita a remoção. Muitas têm!\n\nO primeiro passo é um *diagnóstico completo do seu CPF* por apenas *R$ 50*.\n\nSe seguir com o processo completo, esse valor já vem *abatido*. 💡\n\nO que acha?\n\n1️⃣ Quero fazer o diagnóstico agora\n2️⃣ Tenho dúvidas sobre o valor\n3️⃣ Preciso pensar um pouco`,
+    `${n}, diferente de renegociação, nosso trabalho é jurídico — encontramos erros na dívida pra pedir remoção. ⚖️\n\nPrimeiro passo: *diagnóstico do CPF por R$ 50* (abatido se seguir).\n\n1️⃣ Quero o diagnóstico\n2️⃣ Dúvida sobre o valor\n3️⃣ Preciso pensar`,
 
   obj_valor: () =>
-    `Entendo a dúvida! Mas pensa comigo: 😊\n\n💡 R$ 50 é menos que uma consulta médica\n💡 Se não houver viabilidade, você *saberá antes* de gastar mais\n💡 Se seguir em frente, esse valor já vem *abatido* do total\n\nÉ o caminho mais inteligente antes de qualquer passo maior.\n\n1️⃣ Ok, vou fazer o diagnóstico\n2️⃣ Ainda tenho dúvidas`,
+    `R$ 50 é menos que uma consulta médica. Se não tiver viabilidade, você sabe antes de gastar mais. E é abatido se seguir.\n\n1️⃣ Vamos lá\n2️⃣ Ainda tenho dúvidas`,
 
   obj_pensar: () =>
-    `Claro, sem pressão! 😊\n\nMas me conta: o que está te travando?\n\n1️⃣ Preocupado se é confiável\n2️⃣ Problema com o valor agora\n3️⃣ Quero entender melhor o processo\n4️⃣ Vou pensar e volto depois`,
+    `O que está travando?\n\n1️⃣ Não sei se é confiável\n2️⃣ Não tenho o valor agora\n3️⃣ Quero entender melhor\n4️⃣ Volto depois`,
 
   obj_confiavel: () =>
-    `Entendo completamente — tem muita fraude por aí! 🙏\n\nSomos um *escritório jurídico registrado*. O diagnóstico de R$ 50 existe justamente para você ver a viabilidade *antes* de investir mais.\n\nSe não houver caminho, você saberá e não gasta mais nada. Nosso interesse é só atuar em casos viáveis.\n\n1️⃣ Faz sentido, vou fazer o diagnóstico\n2️⃣ Quero falar com um especialista`,
+    `Somos escritório jurídico registrado. O diagnóstico de R$ 50 é justamente pra você ver a viabilidade antes de investir mais.\n\n1️⃣ Ok, vou fazer\n2️⃣ Quero falar com especialista`,
 
   obj_sem_dinheiro: () =>
-    `Sem problema! R$ 50 pode parecer pouco, mas se não tiver agora, tudo bem. 😊\n\nQuando achar que é o momento certo, é só mandar um *Oi* aqui que retomamos.\n\n1️⃣ Na verdade consigo sim, vamos lá\n2️⃣ Vou guardar e volto em breve`,
+    `Sem problema! Quando estiver pronto, manda *Oi* que retomamos. 😊\n\n1️⃣ Consigo sim, vamos lá\n2️⃣ Volto depois`,
 
   coletar_dados: () =>
-    `Ótimo! 🎉 Já posso abrir o sistema.\n\nMe envia seu *nome completo* e *CPF* para preparar sua consulta. 📋`,
+    `Ótimo! Me envia seu *nome completo* e *CPF*. 📋`,
 
   enviar_pix50: (url) =>
-    `Perfeito! Já estou com a tela aberta. 🖥️\n\n💳 *Valor:* R$ 50\n\n👇 *Clique para pagar (QR Code + Copia e Cola):*\n${url}\n\nAssim que pagar, me envia o comprovante aqui. 📸`,
+    `💳 *R$ 50*\n👇 Pague aqui (QR Code + Copia e Cola):\n${url}\n\nMe envia o comprovante depois. 📸`,
 
   confirmar_pix50: (n) =>
-    `Comprovante recebido! ✅ Obrigado, ${n}!\n\nJá iniciei sua análise... 🔍\n\n━━━━━━━━━━━━━━━\n📊 *RESULTADO DO DIAGNÓSTICO*\n━━━━━━━━━━━━━━━\n\nIdentificamos restrições no seu CPF com *viabilidade real* de atuação jurídica.\n\nO cenário é *favorável* para a restauração do seu crédito. ✅\n\nQuer que eu explique como funciona o processo completo?\n\n1️⃣ Sim, me conta!\n2️⃣ Tenho dúvidas`,
+    `✅ Recebido, ${n}!\n\n📊 *Diagnóstico concluído:* identificamos restrições com *viabilidade real* de remoção jurídica.\n\n1️⃣ Quero saber o próximo passo\n2️⃣ Tenho dúvidas`,
 
   oferta_servico: (n) =>
-    `${n}, para darmos entrada e buscarmos a liberação do seu nome:\n\n✅ *Entrada:* R$ 250\n🏆 *Sucesso:* R$ 450 _(pago SOMENTE após o êxito)_\n🎁 *Bônus:* Os R$ 50 do diagnóstico já estão abatidos!\n\n⚠️ Se *não funcionar*, você *não paga* os R$ 450. Nosso risco é maior que o seu.\n\n1️⃣ Quero entrar no processo agora\n2️⃣ Tenho dúvidas sobre o valor\n3️⃣ E se não funcionar?\n4️⃣ Quanto tempo demora?`,
+    `${n}, para liberar seu nome:\n\n▶ *Entrada:* R$ 250\n▶ *Êxito:* R$ 450 _(só após resultado)_\n▶ R$ 50 já abatidos!\n\nSe não funcionar, *não paga o êxito*.\n\n1️⃣ Quero entrar\n2️⃣ Valor alto pra mim\n3️⃣ E se não funcionar?\n4️⃣ Quanto tempo demora?`,
 
   obj_caro: () =>
-    `Entendo! Mas pensa no cenário: 💪\n\nCom o nome limpo você volta a ter:\n✅ Cartão de crédito\n✅ Financiamentos\n✅ Crédito no mercado\n\nIsso vale muito mais que R$ 250. E os R$ 450 só pagam *quando o resultado aparecer*.\n\n1️⃣ Faz sentido, vou entrar\n2️⃣ Ainda não tenho o valor agora`,
+    `Nome limpo = cartão, financiamento, crédito. Vale muito mais que R$ 250. E os R$ 450 só pagam com resultado.\n\n1️⃣ Faz sentido, vou entrar\n2️⃣ Não tenho agora`,
 
   obj_e_se_falhar: () =>
-    `Ótima pergunta! E a resposta é simples: 😊\n\n✅ Os R$ 450 de êxito são pagos *SOMENTE após o resultado*\n✅ Se não funcionar, você *não paga* esse valor\n✅ O risco real é nosso — só ganhamos se você ganhar\n\nNosso interesse é que funcione! 💪\n\n1️⃣ Entendi, quero entrar no processo\n2️⃣ Ainda tenho dúvidas`,
+    `Os R$ 450 são pagos *só se funcionar*. Se não funcionar, não paga. Simples assim. 💪\n\n1️⃣ Entendi, quero entrar\n2️⃣ Ainda tenho dúvida`,
 
   obj_tempo: () =>
-    `Boa pergunta! ⏱️\n\nA maioria dos casos tem resultado em *30 a 90 dias*.\nCasos mais simples: menos de 30 dias.\n\nAssim que você entrar, já começamos a contar. ⚡\n\n1️⃣ Ótimo, quero entrar agora\n2️⃣ Preciso pensar mais`,
+    `30 a 90 dias na maioria dos casos. Casos simples, menos de 30. ⏱️\n\n1️⃣ Ótimo, vamos\n2️⃣ Preciso pensar`,
 
   enviar_pix250: (url) =>
-    `Perfeito! 🎉\n\n💳 *Entrada: R$ 250*\n\n👇 *Clique para pagar (QR Code + Copia e Cola):*\n${url}\n\nAssim que pagar, me envia o comprovante. 📸`,
+    `💳 *Entrada R$ 250*\n👇 Pague aqui:\n${url}\n\nMe envia o comprovante. 📸`,
 
-  confirmar_pix250: (n) =>
-    `Entrada confirmada! 🎉🎉\n\nObrigado, *${n}*! Seu processo foi *oficialmente aberto*.\n\nNossa equipe jurídica já está trabalhando no seu caso. 🏛️\n\nVocê receberá atualizações aqui mesmo. Qualquer dúvida é só chamar! 💪`,
+  pedir_docs: (n) =>
+    `✅ Pagamento confirmado, *${n}*!\n\nPara formalizar seu contrato, preciso de:\n\n📄 *1 - Foto do RG* (frente e verso)\n📄 *2 - Foto do CPF*\n\nEnvie as fotos aqui agora. 👆`,
+
+  confirmar_docs: (n) =>
+    `📁 Documentos recebidos!\n\n🎉 *${n}, seu processo foi oficialmente aberto.*\n\nNossa equipe jurídica já está trabalhando no seu caso. Em breve você receberá atualizações aqui. 💪`,
 
   humano: () =>
-    `Um momento! 👋 Vou te conectar com um dos nossos especialistas agora...`,
+    `👋 Conectando com um especialista agora...`,
 
   nao_entendi: () =>
-    `Não entendi. 😅 Por favor, responda com o *número* da opção desejada.`,
+    `Responde com o *número* da opção. 😊`,
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -313,14 +315,20 @@ app.post("/webhook", async (req, res) => {
     } else if (etapa === 10) {
       if (isComprovante(rawMsg)) {
         c.etapa = 11;
-        reply = M.confirmar_pix250(n);
+        reply = M.pedir_docs(n);
       } else {
         reply = `Ainda aguardando seu comprovante, ${n}. 😊\n\n👇 Link para pagar:\n${BASE_URL}/pix/250`;
       }
 
-    // ── E11: processo aberto ──────────────────────────────────
+    // ── E11: aguarda RG e CPF ─────────────────────────────────
     } else if (etapa === 11) {
-      reply = `Processo em andamento! ✅ Nossa equipe jurídica está trabalhando, ${n}. Qualquer novidade aviso aqui! 💪`;
+      // imagem = mensagem vazia ou qualquer envio nessa etapa
+      c.etapa = 12;
+      reply = M.confirmar_docs(n);
+
+    // ── E12: processo aberto ──────────────────────────────────
+    } else if (etapa === 12) {
+      reply = `Processo em andamento! ✅ Qualquer novidade aviso aqui, ${n}. 💪`;
 
     } else {
       reply = `Oi, ${n}! 😊 Manda um *Oi* para acessar o menu.`;
