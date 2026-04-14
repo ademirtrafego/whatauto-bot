@@ -125,6 +125,9 @@ const M = {
   menu: (n)=>
     `Prazer, *${n}*! 😊\n\nComo posso te ajudar?\n\n1️⃣ Quero limpar meu nome\n2️⃣ Entender como funciona`,
 
+  menu_retorno: (n)=>
+    `Certo, *${n}*! 😊 Por onde quer continuar?\n\n1️⃣ Quero fazer o diagnóstico do meu CPF\n2️⃣ Entender melhor como funciona\n3️⃣ Tirar uma dúvida específica`,
+
   como_funciona: ()=>
     `Boa pergunta! 💡\n\nMuita gente confunde nosso trabalho com renegociação — mas são coisas completamente diferentes.\n\nNós fazemos uma *análise jurídica* das suas dívidas. Identificamos irregularidades como:\n\n• Juros acima do permitido por lei\n• Dívidas com prazo de prescrição vencido\n• Cobranças indevidas ou duplicadas\n\nCom isso, entramos juridicamente pedindo a *remoção dos apontamentos* dos órgãos de restrição (Serasa, SPC e outros). Você volta a ter crédito no mercado! ⚖️\n\n*Bônus:* após a remoção, trabalhamos também no *aumento do seu score*. 📈\n\n1️⃣ Quero fazer um diagnóstico do meu CPF\n2️⃣ Voltar ao menu`,
 
@@ -311,8 +314,20 @@ app.post("/webhook", async (req, res) => {
     // ── E20: como funciona ────────────────────────────────────
     } else if (etapa===20) {
       if      (num==="1") { c.etapa=3; reply=M.onde(); }
-      else if (num==="2") { c.etapa=2; reply=M.menu(n); }
+      else if (num==="2") { c.etapa=21; reply=M.menu_retorno(n); }
       else                { reply=M.nao_entendi()+"\n\n"+M.como_funciona(); }
+
+    // ── E21: menu retorno (nome já salvo) ────────────────────
+    } else if (etapa===21) {
+      if      (num==="1") { c.etapa=3; reply=M.onde(); }
+      else if (num==="2") { c.etapa=20; reply=M.como_funciona(); }
+      else if (num==="3") { c.etapa=22; reply=`Claro, ${n}! Qual é a sua dúvida? Pode falar à vontade. 😊`; }
+      else                { reply=M.nao_entendi()+"\n\n"+M.menu_retorno(n); }
+
+    // ── E22: dúvida livre ─────────────────────────────────────
+    } else if (etapa===22) {
+      c.etapa=21;
+      reply=`Entendido! 😊 Se quiser avançar:\n\n`+M.menu_retorno(n);
 
     // ── E3: onde restrições ───────────────────────────────────
     } else if (etapa===3) {
