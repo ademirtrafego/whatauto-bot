@@ -137,7 +137,7 @@ const M = {
     `💳 *R$ 50*\n👇 Pague aqui (QR Code + Copia e Cola):\n${url}\n\nMe envia o comprovante depois. 📸`,
 
   confirmar_pix50: (n) =>
-    `✅ Recebido, ${n}!\n\n📊 *Diagnóstico concluído:* identificamos restrições com *viabilidade real* de remoção jurídica.\n\n1️⃣ Quero saber o próximo passo\n2️⃣ Tenho dúvidas`,
+    `✅ Comprovante recebido, ${n}!\n\nJá estou iniciando a análise do seu CPF. Em breve um dos nossos especialistas vai te enviar o resultado completo aqui. 🔍\n\nAguarda! 😊`,
 
   oferta_servico: (n) =>
     `${n}, para liberar seu nome:\n\n▶ *Entrada:* R$ 250\n▶ *Êxito:* R$ 450 _(só após resultado)_\n▶ R$ 50 já abatidos!\n\nSe não funcionar, *não paga o êxito*.\n\n1️⃣ Quero entrar\n2️⃣ Valor alto pra mim\n3️⃣ E se não funcionar?\n4️⃣ Quanto tempo demora?`,
@@ -270,14 +270,11 @@ app.post("/webhook", async (req, res) => {
       const url = `${BASE_URL}/pix/50`;
       reply = M.enviar_pix50(url);
 
-    // ── E7: aguarda comprovante R$50 ──────────────────────────
+    // ── E7: aguarda comprovante R$50 (qualquer envio = comprovante) ─
     } else if (etapa === 7) {
-      if (isComprovante(rawMsg)) {
-        c.etapa = 8;
-        reply = M.confirmar_pix50(n);
-      } else {
-        reply = `Ainda aguardando seu comprovante, ${n}. 😊\n\nQuando pagar, é só me enviar a imagem ou print aqui. 📸`;
-      }
+      c.etapa = 8;
+      c.modoHumano = true;
+      reply = M.confirmar_pix50(n);
 
     // ── E8: resultado diagnóstico ─────────────────────────────
     } else if (etapa === 8) {
@@ -312,17 +309,13 @@ app.post("/webhook", async (req, res) => {
       else                { reply = M.nao_entendi() + "\n\n" + M.obj_tempo(); }
 
     // ── E10: aguarda comprovante R$250 ────────────────────────
+    // ── E10: aguarda comprovante R$250 (qualquer envio = comprovante) ─
     } else if (etapa === 10) {
-      if (isComprovante(rawMsg)) {
-        c.etapa = 11;
-        reply = M.pedir_docs(n);
-      } else {
-        reply = `Ainda aguardando seu comprovante, ${n}. 😊\n\n👇 Link para pagar:\n${BASE_URL}/pix/250`;
-      }
+      c.etapa = 11;
+      reply = M.pedir_docs(n);
 
-    // ── E11: aguarda RG e CPF ─────────────────────────────────
+    // ── E11: aguarda RG e CPF (qualquer envio = docs recebidos) ─
     } else if (etapa === 11) {
-      // imagem = mensagem vazia ou qualquer envio nessa etapa
       c.etapa = 12;
       reply = M.confirmar_docs(n);
 
