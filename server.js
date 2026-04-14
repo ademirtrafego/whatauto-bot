@@ -126,7 +126,9 @@ const M = {
     `Prazer, *${n}*! 😊\n\nComo posso te ajudar?\n\n1️⃣ Quero limpar meu nome\n2️⃣ Entender como funciona`,
 
   como_funciona: ()=>
-    `Boa pergunta! 💡\n\nMuita gente confunde nosso trabalho com renegociação — mas são coisas completamente diferentes.\n\nNós fazemos uma *análise jurídica* das suas dívidas. Identificamos irregularidades como:\n\n• Juros acima do permitido por lei\n• Dívidas com prazo de prescrição vencido\n• Cobranças indevidas ou duplicadas\n\nCom isso, entramos juridicamente pedindo a *remoção das restrições*. Você não paga a dívida — a dívida some. ⚖️\n\n1️⃣ Quero fazer um diagnóstico do meu CPF\n2️⃣ Voltar ao menu`,
+    `Boa pergunta! 💡\n\nMuita gente confunde nosso trabalho com renegociação — mas são coisas completamente diferentes.\n\nNós fazemos uma *análise jurídica* das suas dívidas. Identificamos irregularidades como:\n\n• Juros acima do permitido por lei\n• Dívidas com prazo de prescrição vencido\n• Cobranças indevidas ou duplicadas\n\nCom isso, entramos juridicamente pedindo a *remoção dos apontamentos* dos órgãos de restrição (Serasa, SPC e outros). Você volta a ter crédito no mercado! ⚖️
+
+*Bônus:* após a remoção, trabalhamos também no *aumento do seu score*. 📈\n\n1️⃣ Quero fazer um diagnóstico do meu CPF\n2️⃣ Voltar ao menu`,
 
   onde: ()=>
     `Entendido! Me conta: *onde estão suas restrições?*\n\n1️⃣ Serasa\n2️⃣ SPC\n3️⃣ Banco específico\n4️⃣ Cartório\n5️⃣ Não sei ao certo`,
@@ -145,7 +147,7 @@ const M = {
 
   // ── FASE 2: Posicionamento e oferta diagnóstico ─────────────
   posicionamento: (n)=>
-    `${n}, deixa eu ser direto com você. ⚖️\n\nHoje, com o nome sujo, você perde:\n• Acesso a crédito e financiamentos\n• Cartão de crédito\n• Oportunidades de trabalho que pedem CPF limpo\n\nIsso tem um custo invisível que é *muito maior* que qualquer dívida.\n\nNosso processo jurídico age nas *irregularidades* da dívida — e muitas têm. O primeiro passo é um *diagnóstico completo do seu CPF*.\n\nEsse diagnóstico custa *R$ 50* — e se você seguir com o processo, esse valor já vem *abatido*. É literalmente um investimento que se paga. 💡\n\nO que acha?\n\n1️⃣ Quero fazer o diagnóstico agora\n2️⃣ Tenho dúvidas sobre o valor\n3️⃣ Não sei se é confiável\n4️⃣ Já tentei antes e não funcionou\n5️⃣ Preciso entender melhor como funciona\n6️⃣ Preciso pensar um pouco`,
+    `${n}, deixa eu ser direto com você. ⚖️\n\nHoje, com o nome sujo, você perde:\n• Acesso a crédito e financiamentos\n• Cartão de crédito\n• Oportunidades de trabalho que pedem CPF limpo\n\nIsso tem um custo invisível que é *muito maior* que qualquer dívida.\n\nNosso processo jurídico age na *remoção dos apontamentos* dos órgãos de restrição — removemos seu nome do Serasa, SPC e demais cadastros negativos. O primeiro passo é um *diagnóstico completo do seu CPF*.\n\nEsse diagnóstico custa *R$ 50* — e se você seguir com o processo, esse valor já vem *abatido*. É literalmente um investimento que se paga. 💡\n\nO que acha?\n\n1️⃣ Quero fazer o diagnóstico agora\n2️⃣ Tenho dúvidas sobre o valor\n3️⃣ Não sei se é confiável\n4️⃣ Já tentei antes e não funcionou\n5️⃣ Preciso entender melhor como funciona\n6️⃣ Preciso pensar um pouco`,
 
   obj_valor: ()=>
     `Entendo a dúvida! Mas pensa comigo: 🤔\n\n💡 R$ 50 é menos que uma consulta médica\n💡 Se não houver viabilidade no seu caso, você *saberá antes* de gastar mais\n💡 Se seguir com o processo, esse R$ 50 já vem *abatido* do valor final\n\nNão é um gasto — é um investimento inteligente antes de dar um passo maior.\n\n1️⃣ Faz sentido, quero fazer o diagnóstico\n2️⃣ Mesmo assim não tenho o valor agora`,
@@ -160,7 +162,8 @@ const M = {
     `${n}, o que você tentou antes foi *renegociação ou parcelamento*, certo?\n\nEsse modelo não funciona porque a dívida continua existindo — você só adia o problema.\n\nNosso modelo é *jurídico*: a gente analisa se a dívida tem erros legais. E muitas têm! Juros ilegais, prazo vencido, cobranças indevidas. Quando encontramos isso, pedimos juridicamente a *remoção*.\n\nÉ completamente diferente do que você já tentou. 💪\n\n1️⃣ Entendi, quero tentar esse caminho\n2️⃣ Ainda tenho dúvidas`,
 
   obj_entender: ()=>
-    `Claro! Vou explicar em 3 passos simples: 📋\n\n*1.* Fazemos o diagnóstico do seu CPF (R$ 50) — identificamos todas as restrições e se têm irregularidades\n*2.* Se houver viabilidade, abrimos o processo jurídico (entrada de R$ 250)\n*3.* Nossa equipe age nas irregularidades e pede a remoção — você paga os R$ 450 de êxito *somente quando o nome estiver limpo*\n\nRisco mínimo para você. O nosso é maior — só ganhamos se você ganhar. ⚖️\n\n1️⃣ Entendi! Quero começar com o diagnóstico\n2️⃣ Ainda tenho dúvida`,
+    `Claro! Vou explicar em 3 passos simples: 📋\n\n*1.* Fazemos o diagnóstico do seu CPF (R$ 50) — identificamos todas as restrições e se têm irregularidades\n*2.* Se houver viabilidade, abrimos o processo jurídico (entrada de R$ 250)\n*3.* Nossa equipe age juridicamente para *remover os apontamentos* dos órgãos de restrição — você paga os R$ 450 de êxito *somente quando o nome estiver limpo*
+*Bônus:* trabalhamos também no aumento do seu score! 📈\n\nRisco mínimo para você. O nosso é maior — só ganhamos se você ganhar. ⚖️\n\n1️⃣ Entendi! Quero começar com o diagnóstico\n2️⃣ Ainda tenho dúvida`,
 
   obj_pensar_50: ()=>
     `Claro, sem pressão! 😊\n\nMas antes de pensar, deixa eu te fazer uma pergunta: *o que exatamente está te travando?*\n\n1️⃣ Questão financeira no momento\n2️⃣ Não confio totalmente ainda\n3️⃣ Quero consultar alguém antes\n4️⃣ Vou pensar e retorno depois`,
@@ -199,7 +202,7 @@ const M = {
 
   // ── FASE 4: Oferta processo completo ────────────────────────
   oferta_processo: (n)=>
-    `${n}, para darmos entrada e buscarmos a *liberação do seu nome*: ⚖️\n\n▶ *Entrada:* R$ 250\n▶ *Êxito:* R$ 450 _(pago SOMENTE após resultado comprovado)_\n▶ *Bônus:* Os R$ 50 do diagnóstico já estão abatidos!\n▶ *Prazo:* até *30 dias úteis*\n▶ *Contrato:* sim, você recebe um contrato formal\n\n⚠️ Se não funcionar, você *não paga* os R$ 450. Só ganhamos se você ganhar.\n\n1️⃣ Quero entrar no processo agora\n2️⃣ O valor está alto para mim\n3️⃣ E se não funcionar?\n4️⃣ Quanto tempo demora?\n5️⃣ Como funciona o contrato?\n6️⃣ Preciso pensar um pouco`,
+    `${n}, para darmos entrada e buscarmos a *liberação do seu nome*: ⚖️\n\n▶ *Entrada:* R$ 250\n▶ *Êxito:* R$ 450 _(pago SOMENTE após resultado comprovado)_\n▶ *Bônus:* Os R$ 50 do diagnóstico já estão abatidos!\n▶ *Prazo:* até *30 dias úteis*\n▶ *Bônus:* aumento de score incluído! 📈\n▶ *Contrato:* sim, você recebe um contrato formal\n\n⚠️ Se não funcionar, você *não paga* os R$ 450. Só ganhamos se você ganhar.\n\n1️⃣ Quero entrar no processo agora\n2️⃣ O valor está alto para mim\n3️⃣ E se não funcionar?\n4️⃣ Quanto tempo demora?\n5️⃣ Como funciona o contrato?\n6️⃣ Preciso pensar um pouco`,
 
   obj_caro: (n)=>
     `${n}, entendo. Mas deixa eu colocar na balança: 💰\n\nCom o nome limpo você volta a ter:\n✅ Cartão de crédito\n✅ Financiamentos\n✅ Crédito no comércio\n✅ Oportunidades de trabalho\n\nIsso representa *muito mais* que R$ 250 por mês. E os R$ 450 de êxito só pagam *depois que seu nome já estiver limpo*.\n\n1️⃣ Faz sentido, quero entrar\n2️⃣ Realmente não tenho o valor agora`,
@@ -241,7 +244,7 @@ const M = {
 
   // ── FASE 6: Fechamento ───────────────────────────────────────
   fechamento: (n)=>
-    `🎉 *${n}, seu processo foi OFICIALMENTE ABERTO!*\n\nAqui está o resumo do que acontece agora:\n\n⚖️ Nossa equipe jurídica já está analisando seu caso\n📅 Prazo de até *30 dias úteis* para resultado\n📄 Contrato será enviado em breve\n💰 Os R$ 450 de êxito só serão cobrados *após* o resultado\n\nVocê tomou a decisão certa hoje. Nome limpo está mais perto do que você imagina! 💪\n\nQualquer dúvida ao longo do processo, é só mandar mensagem aqui. Estamos com você! 😊`,
+    `🎉 *${n}, seu processo foi OFICIALMENTE ABERTO!*\n\nAqui está o resumo do que acontece agora:\n\n⚖️ Nossa equipe jurídica já está trabalhando na *remoção dos seus apontamentos*\n📅 Prazo de até *30 dias úteis* para resultado\n📈 *Bônus:* aumento de score incluso\n📄 Contrato será enviado em breve\n💰 Os R$ 450 de êxito só serão cobrados *após* o resultado\n\nVocê tomou a decisão certa hoje. Nome limpo está mais perto do que você imagina! 💪\n\nQualquer dúvida ao longo do processo, é só mandar mensagem aqui. Estamos com você! 😊`,
 
   humano: ()=>
     `👋 Conectando com um especialista agora...`,
@@ -287,9 +290,9 @@ app.post("/webhook", async (req, res) => {
       return res.json({ reply: M.humano() });
     }
 
-    // Reinício
-    if (etapa===0 || isOi(rawMsg)) {
-      Object.assign(c,{etapa:1,nome:"",cpf:"",dados:"",cobrancaId50:"",cobrancaId250:"",pagos:[]});
+    // Reinício — qualquer msg nova quando fluxo acabou, ou saudação
+    if (etapa===0 || etapa>=17 || isOi(rawMsg)) {
+      Object.assign(c,{etapa:1,nome:"",cpf:"",dados:"",cobrancaId50:"",cobrancaId250:"",pagos:[],modoHumano:false});
       await save(id,c);
       return res.json({ reply: M.inicio() });
     }
