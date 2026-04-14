@@ -126,7 +126,71 @@ const M = {
     `Prazer, *${n}*! 😊\n\nComo posso te ajudar?\n\n1️⃣ Quero limpar meu nome\n2️⃣ Entender como funciona`,
 
   menu_retorno: (n)=>
-    `Certo, *${n}*! 😊 Por onde quer continuar?\n\n1️⃣ Quero fazer o diagnóstico do meu CPF\n2️⃣ Entender melhor como funciona\n3️⃣ Tirar uma dúvida específica`,
+    `Certo, *${n}*! 😊 Por onde quer continuar?\n\n1️⃣ Quero fazer o diagnóstico do meu CPF\n2️⃣ Entender melhor como funciona\n3️⃣ Tenho dúvidas antes de decidir`,
+
+  // ── MENUS DE DÚVIDAS ─────────────────────────────────────────
+  menu_categorias: ()=>
+    `Pode tirar todas as dúvidas! 😊 Escolha a categoria:\n\n1️⃣ Sobre o serviço\n2️⃣ Sobre confiança e segurança\n3️⃣ Sobre valores e prazo\n4️⃣ Sobre contrato e garantias\n5️⃣ Sobre o resultado\n6️⃣ Sobre o diagnóstico de R$ 50\n\n7️⃣ Já tirei minhas dúvidas — quero começar!`,
+
+  // Categoria 1 — Serviço
+  cat1: ()=>
+    `*Sobre o serviço:* ⚖️\n\n1️⃣ O que exatamente vocês fazem?\n2️⃣ Preciso pagar a dívida?\n3️⃣ Funciona pra qualquer tipo de dívida?\n4️⃣ E se eu tiver muitas dívidas?\n5️⃣ Funciona pra dívida antiga ou recente?\n\n0️⃣ Voltar às categorias`,
+
+  r1_1: ()=> `*O que fazemos:* ⚖️\n\nAnalisamos juridicamente suas dívidas em busca de irregularidades — juros abusivos, prescrição vencida, cobranças indevidas. Quando encontramos, entramos com pedido jurídico para *remover os apontamentos* do Serasa, SPC e demais órgãos de restrição.\n\nResultado: seu nome limpo e crédito disponível novamente. 🎯`,
+  r1_2: ()=> `*Não precisa pagar a dívida.* 🙅\n\nNosso trabalho remove os *apontamentos* — não a dívida em si. A restrição sai do Serasa/SPC e você volta a ter crédito no mercado.\n\nA dívida pode continuar existindo juridicamente, mas sem te impedir de ter crédito. ✅`,
+  r1_3: ()=> `Trabalhamos com a maioria dos tipos: *cartão de crédito, bancos, financeiras, lojas, operadoras de telefone* e outros.\n\nO diagnóstico de R$ 50 serve exatamente para identificar quais dívidas têm viabilidade jurídica no seu caso específico. 🔍`,
+  r1_4: ()=> `Quanto mais restrições, *maior o potencial de atuação*! 💪\n\nAnalisamos todas as dívidas do seu CPF no diagnóstico e identificamos em quais podemos agir. Você receberá um panorama completo antes de qualquer decisão.`,
+  r1_5: ()=> `Funciona para os dois casos! ✅\n\n• *Dívidas antigas:* maior chance de prescrição ou irregularidades acumuladas\n• *Dívidas recentes:* verificamos cobranças indevidas e juros abusivos\n\nO diagnóstico revela o cenário exato do seu caso.`,
+
+  // Categoria 2 — Confiança
+  cat2: ()=>
+    `*Sobre confiança e segurança:* 🔒\n\n1️⃣ Como sei que não é golpe?\n2️⃣ Vocês são um escritório registrado?\n3️⃣ Já atenderam outros clientes?\n4️⃣ Por que cobram só R$ 50 no início?\n5️⃣ Meus dados ficam seguros?\n\n0️⃣ Voltar às categorias`,
+
+  r2_1: ()=> `Entendo completamente — tem muita fraude por aí. 🙏\n\nAlguns sinais de que somos sérios:\n\n✅ Cobramos R$ 50 primeiro (não R$ 500 de cara)\n✅ O processo completo só paga após resultado\n✅ Emitimos contrato formal com CNPJ\n✅ Você pode verificar nosso registro antes de qualquer pagamento\n\nFraude pede valor alto na hora. Nós pedimos R$ 50 para provar viabilidade primeiro.`,
+  r2_2: ()=> `Sim! Somos um *escritório jurídico devidamente registrado*. 📋\n\nAtuamos com assessoria jurídica especializada em direito do consumidor e proteção de crédito. Nosso trabalho é baseado em lei — especificamente no Código de Defesa do Consumidor e na legislação de proteção de dados.`,
+  r2_3: ()=> `Sim, atendemos *centenas de clientes* com sucesso. 🎉\n\nMuitos chegaram frustrados após tentativas de renegociação e conseguiram resultado com nosso método jurídico.\n\nO processo funciona porque age na *causa jurídica* do problema, não apenas na negociação.`,
+  r2_4: ()=> `Exatamente por isso: *transparência*. 💡\n\nO R$ 50 cobre o custo real de análise do seu CPF. Não faz sentido cobrar R$ 250 de entrada sem antes verificar se há viabilidade no seu caso.\n\nSe não houver caminho jurídico, você saberá por apenas R$ 50 — e não perde mais nada.`,
+  r2_5: ()=> `*Seus dados ficam totalmente seguros.* 🔐\n\nUsamos as informações apenas para análise jurídica e elaboração do contrato. Não compartilhamos com terceiros. Seguimos a *LGPD* (Lei Geral de Proteção de Dados).\n\nRG, CPF e dados pessoais ficam protegidos em nosso sistema.`,
+
+  // Categoria 3 — Valores e prazo
+  cat3: ()=>
+    `*Sobre valores e prazo:* 💰\n\n1️⃣ Quanto custa no total?\n2️⃣ Quanto tempo demora?\n3️⃣ Quando começa após o pagamento?\n4️⃣ Se não funcionar, perco tudo?\n5️⃣ Posso parcelar?\n\n0️⃣ Voltar às categorias`,
+
+  r3_1: ()=> `*Valores completos:* 💰\n\n▶ Diagnóstico: *R$ 50* _(abatido se seguir)_\n▶ Entrada: *R$ 250*\n▶ Êxito: *R$ 450* _(só após resultado)_\n\n*Total real: R$ 650* — sendo que os R$ 450 finais só são cobrados quando seu nome já estiver limpo e você puder comprovar. Não tem surpresa.`,
+  r3_2: ()=> `*Prazo de até 30 dias úteis.* ⏱️\n\nA maioria dos casos resolve antes. Casos simples, menos de 15 dias. O prazo exato depende da complexidade das restrições identificadas no seu diagnóstico.`,
+  r3_3: ()=> `*No mesmo dia do pagamento da entrada.* ⚡\n\nAssim que confirmamos o pagamento e recebemos seus documentos, o processo é aberto e nossa equipe começa a trabalhar imediatamente.`,
+  r3_4: ()=> `Você perde apenas os *R$ 250 de entrada* — que cobrem o trabalho jurídico realizado. \n\nOs *R$ 450 de êxito* só são cobrados se funcionar. Se não funcionar, esse valor não é cobrado. Período. 💪`,
+  r3_5: ()=> `No momento trabalhamos com pagamento à vista via Pix. \n\nMas lembra: os R$ 450 de êxito só pagam após o resultado — então você não precisa ter o valor total agora. O desembolso é em etapas: R$ 50 agora, R$ 250 na entrada, R$ 450 só no final quando já tiver o nome limpo. 😊`,
+
+  // Categoria 4 — Contrato e garantias
+  cat4: ()=>
+    `*Sobre contrato e garantias:* 📄\n\n1️⃣ Como funciona o contrato?\n2️⃣ Tenho garantia por escrito?\n3️⃣ Posso cancelar depois?\n4️⃣ O que preciso enviar?\n5️⃣ Como recebo o contrato?\n\n0️⃣ Voltar às categorias`,
+
+  r4_1: ()=> `*Contrato formal com tudo por escrito.* 📋\n\nO contrato inclui:\n✅ Identificação completa das partes\n✅ Descrição do serviço e escopo\n✅ Prazo de até 30 dias úteis\n✅ Cláusula de êxito (R$ 450 só após resultado)\n✅ Obrigações de ambas as partes\n✅ Política de cancelamento`,
+  r4_2: ()=> `*Sim, garantia por escrito no contrato.* ✅\n\nA principal garantia: os R$ 450 de êxito são cobrados *somente após* a remoção dos apontamentos ser comprovada. Se não houver resultado, não há cobrança do êxito. Isso fica registrado em contrato.`,
+  r4_3: ()=> `*Sim, você pode cancelar.* 📋\n\nO contrato tem política de cancelamento clara. Recomendamos ler com atenção antes de assinar. Nossa equipe esclarece qualquer dúvida sobre os termos antes da assinatura.`,
+  r4_4: ()=> `Muito simples! Precisamos apenas de:\n\n📸 *Foto do RG* (frente e verso)\n📸 *Foto do CPF*\n\nAlém do seu nome completo e CPF que você já nos forneceu no diagnóstico. Nada mais.`,
+  r4_5: ()=> `O contrato é enviado *digitalmente aqui mesmo no WhatsApp* após o pagamento da entrada.\n\nVocê assina de forma digital e recebe uma cópia. Tudo fica registrado e acessível quando precisar.`,
+
+  // Categoria 5 — Resultado
+  cat5: ()=>
+    `*Sobre o resultado:* 🏆\n\n1️⃣ Como fico sabendo do resultado?\n2️⃣ Remove de todos os órgãos (Serasa, SPC)?\n3️⃣ Como funciona o bônus de score?\n4️⃣ O que acontece com a dívida depois?\n5️⃣ Posso pedir crédito logo após?\n\n0️⃣ Voltar às categorias`,
+
+  r5_1: ()=> `Você fica sabendo *aqui mesmo pelo WhatsApp*. 📲\n\nNossa equipe envia atualizações do processo e avisa quando os apontamentos forem removidos. Você também pode consultar o Serasa/SPC a qualquer momento para acompanhar.`,
+  r5_2: ()=> `*Sim, atuamos em todos os órgãos de restrição.* ✅\n\nSerasa, SPC, Boa Vista (SCPC), Quod e demais cadastros negativos. O objetivo é a remoção completa para que você volte a ter crédito em qualquer instituição.`,
+  r5_3: ()=> `O bônus de score é um *serviço adicional incluído* no processo. 📈\n\nApós a remoção dos apontamentos, orientamos as melhores práticas para aumentar seu score rapidamente — movimentação em conta, pagamentos em dia, uso estratégico de crédito.\n\nAlguns clientes saem do processo com score acima de 700 pontos.`,
+  r5_4: ()=> `A dívida pode continuar existindo juridicamente, mas *sem te impedir de ter crédito*. 💡\n\nO que removemos são os *apontamentos* — os registros negativos nos órgãos de proteção ao crédito. É isso que te impede de ter cartão, financiamento e crédito.\n\nCom os apontamentos removidos, o mercado te enxerga como cliente apto. ✅`,
+  r5_5: ()=> `*Sim!* Assim que os apontamentos forem removidos, você já pode solicitar crédito normalmente. 🎉\n\nCartões, financiamentos, crédito no comércio — tudo fica disponível. Por isso também trabalhamos o score: pra você aproveitar ao máximo a liberação do nome.`,
+
+  // Categoria 6 — Diagnóstico
+  cat6: ()=>
+    `*Sobre o diagnóstico de R$ 50:* 🔍\n\n1️⃣ O que é o diagnóstico exatamente?\n2️⃣ O R$ 50 é devolvido?\n3️⃣ E se não houver viabilidade?\n4️⃣ O diagnóstico é imediato?\n5️⃣ Preciso enviar documentos pro diagnóstico?\n\n0️⃣ Voltar às categorias`,
+
+  r6_1: ()=> `O diagnóstico é uma *análise completa do seu CPF* feita por nossa equipe. 🔍\n\nVerificamos:\n• Todos os apontamentos ativos\n• Origem e data de cada dívida\n• Irregularidades jurídicas presentes\n• Viabilidade de atuação em cada caso\n\nVocê recebe um panorama real antes de qualquer decisão maior.`,
+  r6_2: ()=> `*Não é devolvido* — mas é *abatido*. 💡\n\nSe você seguir com o processo completo, os R$ 50 do diagnóstico são descontados do valor final. Na prática, você não paga duas vezes.\n\nSe não houver viabilidade e você não seguir, os R$ 50 cobrem o custo real da análise realizada.`,
+  r6_3: ()=> `Se não houver viabilidade jurídica no seu caso, você *saberá com clareza* — e não perde mais nada além dos R$ 50. 🙏\n\nSomos honestos: preferimos dizer que não tem viabilidade do que cobrar R$ 250 de entrada sem perspectiva real de resultado.`,
+  r6_4: ()=> `A análise é feita assim que confirmamos seu pagamento. ⚡\n\nVocê receberá o resultado *nessa mesma conversa* em instantes. Não precisa aguardar dias.`,
+  r6_5: ()=> `*Não precisa enviar nada pro diagnóstico.* 😊\n\nApenas seu *nome completo e CPF* — que você já nos fornece aqui no chat. Os documentos (RG e CPF físico) só são solicitados depois, na fase do contrato.`,
 
   como_funciona: ()=>
     `Boa pergunta! 💡\n\nMuita gente confunde nosso trabalho com renegociação — mas são coisas completamente diferentes.\n\nNós fazemos uma *análise jurídica* das suas dívidas. Identificamos irregularidades como:\n\n• Juros acima do permitido por lei\n• Dívidas com prazo de prescrição vencido\n• Cobranças indevidas ou duplicadas\n\nCom isso, entramos juridicamente pedindo a *remoção dos apontamentos* dos órgãos de restrição (Serasa, SPC e outros). Você volta a ter crédito no mercado! ⚖️\n\n*Bônus:* após a remoção, trabalhamos também no *aumento do seu score*. 📈\n\n1️⃣ Quero fazer um diagnóstico do meu CPF\n2️⃣ Voltar ao menu`,
@@ -324,10 +388,80 @@ app.post("/webhook", async (req, res) => {
       else if (num==="3") { c.etapa=22; reply=`Claro, ${n}! Qual é a sua dúvida? Pode falar à vontade. 😊`; }
       else                { reply=M.nao_entendi()+"\n\n"+M.menu_retorno(n); }
 
-    // ── E22: dúvida livre ─────────────────────────────────────
+    // ── E22: menu categorias ─────────────────────────────────
     } else if (etapa===22) {
-      c.etapa=21;
-      reply=`Entendido! 😊 Se quiser avançar:\n\n`+M.menu_retorno(n);
+      c.etapa=220; reply=M.menu_categorias();
+
+    // ── E220: escolhe categoria ───────────────────────────────
+    } else if (etapa===220) {
+      if      (num==="1") { c.etapa=221; reply=M.cat1(); }
+      else if (num==="2") { c.etapa=222; reply=M.cat2(); }
+      else if (num==="3") { c.etapa=223; reply=M.cat3(); }
+      else if (num==="4") { c.etapa=224; reply=M.cat4(); }
+      else if (num==="5") { c.etapa=225; reply=M.cat5(); }
+      else if (num==="6") { c.etapa=226; reply=M.cat6(); }
+      else if (num==="7") { c.etapa=3;   reply=M.onde(); }
+      else                { reply=M.nao_entendi()+"\n\n"+M.menu_categorias(); }
+
+    // ── E221: serviço ─────────────────────────────────────────
+    } else if (etapa===221) {
+      if      (num==="1") { reply=M.r1_1()+"\n\n"+M.cat1(); }
+      else if (num==="2") { reply=M.r1_2()+"\n\n"+M.cat1(); }
+      else if (num==="3") { reply=M.r1_3()+"\n\n"+M.cat1(); }
+      else if (num==="4") { reply=M.r1_4()+"\n\n"+M.cat1(); }
+      else if (num==="5") { reply=M.r1_5()+"\n\n"+M.cat1(); }
+      else if (num==="0") { c.etapa=220; reply=M.menu_categorias(); }
+      else                { reply=M.nao_entendi()+"\n\n"+M.cat1(); }
+
+    // ── E222: confiança ───────────────────────────────────────
+    } else if (etapa===222) {
+      if      (num==="1") { reply=M.r2_1()+"\n\n"+M.cat2(); }
+      else if (num==="2") { reply=M.r2_2()+"\n\n"+M.cat2(); }
+      else if (num==="3") { reply=M.r2_3()+"\n\n"+M.cat2(); }
+      else if (num==="4") { reply=M.r2_4()+"\n\n"+M.cat2(); }
+      else if (num==="5") { reply=M.r2_5()+"\n\n"+M.cat2(); }
+      else if (num==="0") { c.etapa=220; reply=M.menu_categorias(); }
+      else                { reply=M.nao_entendi()+"\n\n"+M.cat2(); }
+
+    // ── E223: valores e prazo ─────────────────────────────────
+    } else if (etapa===223) {
+      if      (num==="1") { reply=M.r3_1()+"\n\n"+M.cat3(); }
+      else if (num==="2") { reply=M.r3_2()+"\n\n"+M.cat3(); }
+      else if (num==="3") { reply=M.r3_3()+"\n\n"+M.cat3(); }
+      else if (num==="4") { reply=M.r3_4()+"\n\n"+M.cat3(); }
+      else if (num==="5") { reply=M.r3_5()+"\n\n"+M.cat3(); }
+      else if (num==="0") { c.etapa=220; reply=M.menu_categorias(); }
+      else                { reply=M.nao_entendi()+"\n\n"+M.cat3(); }
+
+    // ── E224: contrato e garantias ────────────────────────────
+    } else if (etapa===224) {
+      if      (num==="1") { reply=M.r4_1()+"\n\n"+M.cat4(); }
+      else if (num==="2") { reply=M.r4_2()+"\n\n"+M.cat4(); }
+      else if (num==="3") { reply=M.r4_3()+"\n\n"+M.cat4(); }
+      else if (num==="4") { reply=M.r4_4()+"\n\n"+M.cat4(); }
+      else if (num==="5") { reply=M.r4_5()+"\n\n"+M.cat4(); }
+      else if (num==="0") { c.etapa=220; reply=M.menu_categorias(); }
+      else                { reply=M.nao_entendi()+"\n\n"+M.cat4(); }
+
+    // ── E225: resultado ───────────────────────────────────────
+    } else if (etapa===225) {
+      if      (num==="1") { reply=M.r5_1()+"\n\n"+M.cat5(); }
+      else if (num==="2") { reply=M.r5_2()+"\n\n"+M.cat5(); }
+      else if (num==="3") { reply=M.r5_3()+"\n\n"+M.cat5(); }
+      else if (num==="4") { reply=M.r5_4()+"\n\n"+M.cat5(); }
+      else if (num==="5") { reply=M.r5_5()+"\n\n"+M.cat5(); }
+      else if (num==="0") { c.etapa=220; reply=M.menu_categorias(); }
+      else                { reply=M.nao_entendi()+"\n\n"+M.cat5(); }
+
+    // ── E226: diagnóstico R$50 ────────────────────────────────
+    } else if (etapa===226) {
+      if      (num==="1") { reply=M.r6_1()+"\n\n"+M.cat6(); }
+      else if (num==="2") { reply=M.r6_2()+"\n\n"+M.cat6(); }
+      else if (num==="3") { reply=M.r6_3()+"\n\n"+M.cat6(); }
+      else if (num==="4") { reply=M.r6_4()+"\n\n"+M.cat6(); }
+      else if (num==="5") { reply=M.r6_5()+"\n\n"+M.cat6(); }
+      else if (num==="0") { c.etapa=220; reply=M.menu_categorias(); }
+      else                { reply=M.nao_entendi()+"\n\n"+M.cat6(); }
 
     // ── E3: onde restrições ───────────────────────────────────
     } else if (etapa===3) {
