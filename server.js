@@ -292,7 +292,7 @@ app.post("/webhook", async (req, res) => {
     }
 
     // Reinício — qualquer msg nova quando fluxo acabou, ou saudação
-    if (etapa===0 || etapa>=17 || isOi(rawMsg)) {
+    if (etapa===0 || etapa===17 || isOi(rawMsg)) {
       Object.assign(c,{etapa:1,nome:"",cpf:"",dados:"",cobrancaId50:"",cobrancaId250:"",pagos:[],modoHumano:false});
       await save(id,c);
       return res.json({ reply: M.inicio() });
