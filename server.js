@@ -163,7 +163,7 @@ app.post("/webhook", (req, res) => {
     }
 
     contatos.set(telefone, contato);
-    res.send(resposta);
+    res.json({ reply: resposta });
 
   } catch (err) {
     console.error("Erro no webhook:", err.message);
