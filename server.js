@@ -6,27 +6,43 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const redis = new Redis({
-  url: "https://gorgeous-warthog-98319.upstash.io",
-  token: "gQAAAAAAAYAPAAIncDIwNjA2ZjEyZDUwZGQ0YTJmOGEyOWExMzk5ODIwOTI4MnAyOTgzMTk",
-});
-
+const REDIS_URL   = "https://gorgeous-warthog-98319.upstash.io";
+const REDIS_TOKEN = "gQAAAAAAAYAPAAIncDIwNjA2ZjEyZDUwZGQ0YTJmOGEyOWExMzk5ODIwOTI4MnAyOTgzMTk";
 const DEEPSEEK_KEY = "sk-c05be12eec56495db38070240180103e";
-const BASE_URL = process.env.BASE_URL || "https://whatauto-bot-production.up.railway.app";
+
+let redis;
+try {
+  redis = new Redis({ url: REDIS_URL, token: REDIS_TOKEN });
+  console.log("✅ Redis conectado");
+} catch (e) {
+  console.error("❌ Redis erro:", e.message);
+}
+
+const BASE_URL = process.env.RAILWAY_PUBLIC_DOMAIN
+  ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+  : process.env.BASE_URL || "https://whatauto-bot-production.up.railway.app";
 
 // ── Estado ────────────────────────────────────────────────────
 async function getContato(id) {
-  return (await redis.get(`c:${id}`)) || {
-    etapa: 0, nome: "", dados: "", historico: [], modoHumano: false
-  };
+  try {
+    return (await redis.get(`c:${id}`)) || { etapa: 0, nome: "", dados: "", historico: [], modoHumano: false };
+  } catch (e) {
+    console.error("Redis get erro:", e.message);
+    return { etapa: 0, nome: "", dados: "", historico: [], modoHumano: false };
+  }
 }
-async function salvarContato(id, c) { await redis.set(`c:${id}`, c); }
+
+async function salvarContato(id, c) {
+  try { await redis.set(`c:${id}`, c); }
+  catch (e) { console.error("Redis set erro:", e.message); }
+}
 
 function identificarContato(body) {
   const phone  = (body.phone  || "").toString().trim();
   const sender = (body.sender || "").toString().trim();
+  console.log(`📱 phone="${phone}" sender="${sender}"`);
   if (phone  && phone  !== "WhatsAuto app" && /\d/.test(phone))  return phone;
-  if (sender && sender !== "WhatsAuto app") return sender;
+  if (sender && sender !== "WhatsAuto app" && sender !== "") return sender;
   return `teste_${Date.now()}`;
 }
 
@@ -40,163 +56,77 @@ function ehSaudacao(msg) {
 
 function ehComprovante(msg) {
   if (!msg || msg.trim() === "") return true;
-  return /paguei|pago|fiz o? ?pix|transferi|enviado|efetuado|feito|realizei|conclu[íi]do|aqui (est[aá]|ta|t[aá]|segue|o)|ta aqui|t[aá] aqui|pronto|segue|segura|aqui [oó]|comprovante|screenshot|print/i.test(msg);
+  return /paguei|pago|fiz o? ?pix|transferi|enviado|efetuado|feito|realizei|conclu[íi]do|aqui (est[aá]|ta|t[aá])|t[aá] aqui|pronto|segue|comprovante|screenshot|print/i.test(msg);
 }
 
-// ─────────────────────────────────────────────────────────────
-//  SISTEMA COMPLETO DE TREINAMENTO DO BOT
-// ─────────────────────────────────────────────────────────────
-const SYSTEM_PROMPT = `Você é o agente virtual da JustHelp Assessoria Jurídica, especializado em restauração de crédito via WhatsApp. Seu objetivo é qualificar, engajar e fechar a venda com cada novo contato do início ao fim, sem necessidade de intervenção humana.
+// ── DeepSeek ──────────────────────────────────────────────────
+const SYSTEM_PROMPT = `Você é o agente virtual da JustHelp Assessoria Jurídica, especializado em restauração de crédito no WhatsApp.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-SOBRE A JUSTHELP
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SOBRE A JUSTHELP:
 - Escritório jurídico especializado em restauração de crédito
-- NÃO fazemos renegociação de dívidas nem parcelamentos
-- Fazemos análise técnica jurídica para identificar IRREGULARIDADES que permitem a remoção de restrições
-- Muitas dívidas têm irregularidades: juros abusivos, prazo de prescrição vencido, cobranças indevidas
-- Atuamos de forma ética e transparente
+- NÃO fazemos renegociação. Fazemos análise jurídica para remover restrições por irregularidades
+- Trabalhamos com ética e transparência
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-ESTRUTURA DE PREÇOS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-1. Diagnóstico de CPF: R$ 50 (abatido se seguir com processo)
-2. Entrada do processo: R$ 250
-3. Taxa de êxito: R$ 450 (pago SOMENTE após resultado)
-Total real: R$ 700 (ou R$ 650 pois diagnóstico é abatido)
+PREÇOS:
+- Diagnóstico CPF: R$ 50 (abatido se seguir)
+- Entrada do processo: R$ 250
+- Taxa de êxito: R$ 450 (SOMENTE após resultado)
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-FLUXO DA CONVERSA (siga esta ordem)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FLUXO:
+1. Pergunte o nome
+2. Contexto: situação das dívidas/restrições
+3. Qualificação: onde estão as restrições, há quanto tempo
+4. Posicionamento: explique que somos diferentes (análise jurídica, não renegociação)
+5. Oferta diagnóstico R$50: peça aceite
+6. Colete nome completo e CPF
+7. Envie link Pix R$50: ${BASE_URL}/pix/50 — retorne acao: "aguardar_pix_50"
+8. Confirme comprovante, entregue diagnóstico, apresente processo completo
+9. Oferta R$250 entrada + R$450 êxito
+10. Envie link Pix R$250: ${BASE_URL}/pix/250 — retorne acao: "aguardar_pix_250"
+11. Confirme pagamento, informe que processo foi aberto
 
-ETAPA 1 — ABERTURA
-Apresente-se com energia, peça o nome do cliente.
-Mensagem: "Opa, tudo bem? 😊 Antes de começarmos, me fala seu *nome* para eu saber com quem estou conversando e te atender melhor."
+OBJEÇÕES:
+- "É golpe" → Escritório registrado. R$50 é para ver viabilidade antes de gastar mais. Risco mínimo
+- "Não tenho R$50" → Menos que uma consulta médica. Volta abatido se seguir. Quando consegue?
+- "Preciso pensar" → O que está travando? Tiro a dúvida agora
+- "Já tentei" → Tentou renegociação? Nosso trabalho é jurídico, completamente diferente
+- "Muito caro" → Com nome limpo volta a ter crédito. R$450 só paga após resultado
+- "E se não funcionar" → R$450 só paga SE funcionar. Nosso risco é maior que o seu
+- "Quero falar com pessoa" → retorne acao: "humano"
 
-ETAPA 2 — CONTEXTO (após receber o nome)
-Cumprimente pelo nome. Pergunte a situação: já sabe as pendências ou quer entender o processo?
-Tom: próximo, humano, sem jargão jurídico.
+REGRAS:
+- Linguagem simples, próxima, sem jargão
+- Use o nome do cliente
+- Mensagens curtas — é WhatsApp
+- *negrito* para destacar valores importantes
+- Emojis com moderação
+- Termine sempre com pergunta ou ação
+- NUNCA pressione agressivamente
 
-ETAPA 3 — QUALIFICAÇÃO
-Aprofunde: onde estão as restrições? (Serasa, SPC, banco, cartório?)
-Já tentou resolver antes? Quanto tempo está negativado?
-Ouça com empatia. Valide a dor do cliente.
+RESPONDA SOMENTE COM JSON VÁLIDO:
+{"resposta": "mensagem ao cliente", "etapa": <1-11>, "acao": "continuar"|"humano"|"aguardar_pix_50"|"aguardar_pix_250"}`;
 
-ETAPA 4 — POSICIONAMENTO (diferencial)
-Seja transparente: explique que não fazemos renegociação.
-Explique a análise jurídica de forma simples:
-"A gente analisa se a dívida tem irregularidades que permitem a remoção. Muitas têm! Juros abusivos, prazo vencido, cobranças indevidas. Nesses casos, pedimos juridicamente a retirada do seu nome."
-
-ETAPA 5 — OFERTA DO DIAGNÓSTICO (R$ 50)
-Apresente o diagnóstico como primeiro passo natural:
-"Para sabermos se o seu caso tem viabilidade, faço um diagnóstico completo do seu CPF por R$ 50. Se seguir com o processo, esse valor já vem abatido. É o caminho mais inteligente antes de qualquer passo maior."
-Finalize com uma pergunta de fechamento: "O que acha?"
-
-ETAPA 6 — COLETA DE DADOS
-Após aceite: solicite nome completo e CPF para a consulta.
-
-ETAPA 7 — PAGAMENTO DIAGNÓSTICO (R$ 50)
-Envie o link de pagamento Pix: ${BASE_URL}/pix/50
-Diga para enviar o comprovante após pagar.
-
-ETAPA 8 — CONFIRMAÇÃO + DIAGNÓSTICO
-Confirme o recebimento. Entregue o resultado:
-"Analisei seu CPF. Identificamos restrições com potencial de atuação jurídica. O cenário é favorável para restauração do seu crédito."
-Crie curiosidade para o próximo passo.
-
-ETAPA 9 — OFERTA DO SERVIÇO COMPLETO
-Apresente os valores: entrada R$ 250 + R$ 450 no êxito.
-Reforce: paga o resultado SOMENTE quando seu nome estiver limpo.
-Pergunte: "Quer que eu dê entrada no processo agora?"
-
-ETAPA 10 — PAGAMENTO ENTRADA (R$ 250)
-Envie o link de pagamento: ${BASE_URL}/pix/250
-Aguarde comprovante.
-
-ETAPA 11 — FECHAMENTO
-Confirme pagamento. Informe que o processo foi aberto.
-"Nossa equipe jurídica já está trabalhando. Você receberá atualizações aqui mesmo."
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-COMO QUEBRAR OBJEÇÕES
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-"É golpe / não confio"
-→ "Entendo a desconfiança — tem muita fraude por aí. Somos um escritório jurídico registrado. O diagnóstico de R$50 é justamente para você ver resultado antes de investir mais. Se não houver viabilidade, você saberá e não gasta mais nada."
-
-"Não tenho R$50 agora"
-→ "R$50 é menos que uma consulta médica, e esse valor já vem de volta abatido se você seguir. Quando você consegue separar esse valor? Posso te aguardar."
-
-"Preciso pensar"
-→ "Claro! O que está te travando? Me conta que eu tiro a dúvida agora mesmo. Às vezes é uma informação simples que muda tudo."
-
-"Já tentei e não funcionou"
-→ "Você tentou renegociar ou parcelar? Isso é diferente do que fazemos. Nosso trabalho é jurídico — a gente encontra os erros na dívida pra pedir a remoção. Muita gente que veio frustrada de outras tentativas conseguiu resultado conosco."
-
-"R$250 é caro / não tenho dinheiro"
-→ "Entendo. Pensa assim: com o nome limpo, você volta a ter crédito, fazer financiamentos, usar cartão. Esse retorno vem em semanas. E os R$450 de êxito só pagam quando seu nome já estiver limpo. O risco real é pequeno perto do que você ganha."
-
-"E se não funcionar?"
-→ "Ótima pergunta. Os R$450 de êxito são pagos SOMENTE após o resultado. Se não funcionar, você não paga esse valor. Nosso interesse é que funcione — só ganhamos se você ganhar."
-
-"Quanto tempo demora?"
-→ "Depende do caso. A maioria dos clientes vê resultado em 30 a 90 dias. Casos mais simples, às vezes menos de 30 dias. Já abrimos o processo hoje, o relógio começa agora."
-
-"Quero falar com uma pessoa"
-→ Retorne acao: "humano"
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-REGRAS DE COMPORTAMENTO
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-- Use linguagem simples, próxima e empática. NUNCA formal demais
-- Use o nome do cliente sempre que possível
-- Mensagens curtas e objetivas — WhatsApp não é email
-- Use negrito (*texto*) para destacar valores e pontos importantes
-- Emojis com moderação (1-2 por mensagem)
-- Nunca minta. Se não souber algo, diga que vai verificar
-- Nunca pressione de forma agressiva. Persistência sim, pressão não
-- Sempre termine com uma pergunta ou chamada para ação
-- Se o cliente sumir, não reenvie mensagem (Whatauto cuida disso)
-- Se perceber que o cliente está com dificuldade financeira real, ofereça entrar em contato depois
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-FORMATO DA SUA RESPOSTA
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Responda SOMENTE com JSON válido, sem texto adicional:
-{
-  "resposta": "mensagem para enviar ao cliente no WhatsApp",
-  "etapa": <número da etapa atual 1-11>,
-  "acao": "continuar" | "humano" | "aguardar_pix_50" | "aguardar_pix_250"
-}
-
-- "continuar": fluxo normal
-- "humano": cliente pediu atendimento humano ou situação muito complexa  
-- "aguardar_pix_50": acabou de enviar o link de R$50, aguardando comprovante
-- "aguardar_pix_250": acabou de enviar o link de R$250, aguardando comprovante`;
-
-// ── Chama DeepSeek com contexto completo ─────────────────────
 async function chamarIA(contato, msgCliente) {
   const { nome, etapa, historico = [] } = contato;
 
-  const contexto = `ESTADO ATUAL:
-- Nome do cliente: ${nome || "ainda não informado"}
-- Etapa atual: ${etapa}
-- Histórico desta conversa: ${historico.length} mensagens trocadas
+  const contexto = `Estado: nome="${nome || "não informado"}" etapa=${etapa}
+Histórico:
+${historico.slice(-10).map(h => `[${h.r === "c" ? "CLIENTE" : "BOT"}]: ${h.t}`).join("\n")}
+Nova mensagem: "${msgCliente}"`;
 
-HISTÓRICO RECENTE:
-${historico.slice(-12).map(h => `[${h.r === "c" ? "CLIENTE" : "BOT"}]: ${h.t}`).join("\n")}
+  console.log(`🤖 Chamando DeepSeek — etapa=${etapa} msg="${msgCliente.substring(0,50)}"`);
 
-NOVA MENSAGEM DO CLIENTE: "${msgCliente}"
-
-Responda como agente da JustHelp seguindo o fluxo e as regras.`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
 
   try {
     const r = await fetch("https://api.deepseek.com/chat/completions", {
       method: "POST",
+      signal: controller.signal,
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${DEEPSEEK_KEY}` },
       body: JSON.stringify({
         model: "deepseek-chat",
-        max_tokens: 600,
+        max_tokens: 500,
         temperature: 0.7,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
@@ -204,122 +134,162 @@ Responda como agente da JustHelp seguindo o fluxo e as regras.`;
         ]
       }),
     });
+    clearTimeout(timeout);
+
+    if (!r.ok) {
+      const err = await r.text();
+      console.error("DeepSeek status:", r.status, err);
+      return null;
+    }
+
     const data = await r.json();
-    const raw = data.choices?.[0]?.message?.content || "{}";
-    return JSON.parse(raw.replace(/```json|```/g, "").trim());
+    console.log("DeepSeek resposta raw:", JSON.stringify(data).substring(0, 200));
+    const raw = data.choices?.[0]?.message?.content || "";
+    const clean = raw.replace(/```json|```/g, "").trim();
+    const parsed = JSON.parse(clean);
+    console.log("✅ DeepSeek parseado:", JSON.stringify(parsed).substring(0, 150));
+    return parsed;
   } catch (e) {
-    console.error("DeepSeek erro:", e.message);
-    return { resposta: "Desculpe, tive um problema técnico. Pode repetir?", etapa: contato.etapa, acao: "continuar" };
+    clearTimeout(timeout);
+    console.error("❌ DeepSeek erro:", e.message);
+    return null;
   }
 }
 
-// ── Webhook principal ─────────────────────────────────────────
+// ── Webhook ───────────────────────────────────────────────────
 app.post("/webhook", async (req, res) => {
+  console.log("\n━━━━━━ WEBHOOK ━━━━━━");
+  console.log("Body:", JSON.stringify(req.body).substring(0, 200));
+
   try {
-    const id       = identificarContato(req.body);
-    const msg      = (req.body.message || "").trim();
+    const id  = identificarContato(req.body);
+    const msg = (req.body.message || "").trim();
+
+    if (!msg && !req.body.phone && !req.body.sender) {
+      console.log("⚠️ Corpo vazio, ignorando");
+      return res.json({ reply: "" });
+    }
+
     const contato  = await getContato(id);
     let { etapa, nome, historico = [], modoHumano } = contato;
-    let resposta = "";
 
-    console.log(`[${id}] etapa=${etapa} msg="${msg.substring(0,60)}"`);
+    console.log(`👤 ID=${id} etapa=${etapa} nome="${nome}" msg="${msg}"`);
 
-    // ── Modo humano ──────────────────────────────────────────
-    if (modoHumano) return res.json({ reply: "" });
+    // Modo humano
+    if (modoHumano) {
+      console.log("🙋 Modo humano ativo — silenciando bot");
+      return res.json({ reply: "" });
+    }
 
-    // ── Novo contato ou saudação — começa do zero ────────────
+    // Novo contato ou saudação
     if (etapa === 0 || ehSaudacao(msg)) {
-      contato.etapa    = 1;
-      contato.nome     = "";
-      contato.dados    = "";
-      contato.historico = [];
-      resposta = "Opa, tudo bem? 😊\n\nAntes de começarmos, me fala seu *nome* para eu saber com quem estou conversando e te atender melhor.";
+      console.log("👋 Iniciando conversa do zero");
+      contato.etapa = 1; contato.nome = ""; contato.dados = ""; contato.historico = [];
+      const resposta = "Opa, tudo bem? 😊\n\nAntes de começarmos, me fala seu *nome* para eu saber com quem estou conversando e te atender melhor.";
       await salvarContato(id, contato);
       return res.json({ reply: resposta });
     }
 
-    // ── Etapa 1: captura o nome de forma simples ─────────────
+    // Captura nome (etapa 1)
     if (etapa === 1) {
       nome = capitalizarNome(msg);
-      contato.nome  = nome;
-      contato.etapa = 2;
+      contato.nome = nome;
       historico.push({ r: "c", t: msg });
+      console.log(`📝 Nome capturado: ${nome}`);
       const ia = await chamarIA({ ...contato, etapa: 2 }, `Meu nome é ${nome}`);
-      resposta = ia.resposta;
-      if (ia.etapa) contato.etapa = ia.etapa;
+      const resposta = ia?.resposta || `Prazer, *${nome}*! 😊\n\nMe conta sua situação: você já sabe quais pendências estão travando seu CPF hoje ou quer entender como funciona nosso processo?`;
+      contato.etapa = ia?.etapa || 2;
       historico.push({ r: "b", t: resposta });
       contato.historico = historico.slice(-20);
       await salvarContato(id, contato);
       return res.json({ reply: resposta });
     }
 
-    // ── Aguardando comprovante R$50 ──────────────────────────
-    if (etapa === 7) {
-      if (ehComprovante(msg)) {
-        contato.etapa = 8;
-        historico.push({ r: "c", t: "[comprovante enviado]" });
-        const ia = await chamarIA({ ...contato, etapa: 8 }, "[cliente enviou comprovante de pagamento de R$50]");
-        resposta = ia.resposta;
-        if (ia.etapa) contato.etapa = ia.etapa;
-        historico.push({ r: "b", t: resposta });
-        contato.historico = historico.slice(-20);
-        await salvarContato(id, contato);
-        return res.json({ reply: resposta });
-      }
-      // Não é comprovante — IA responde (pode ser dúvida)
+    // Comprovante R$50
+    if (etapa === 7 && ehComprovante(msg)) {
+      console.log("💰 Comprovante R$50 detectado");
+      historico.push({ r: "c", t: "[comprovante pix R$50]" });
+      const ia = await chamarIA({ ...contato, etapa: 8 }, "[cliente acabou de enviar comprovante do pagamento de R$50 do diagnóstico]");
+      const resposta = ia?.resposta || `Comprovante recebido! ✅ Obrigado, ${nome}!\n\nJá iniciei sua análise de CPF. Aguarda um instante... 🔍\n\n${nome}, terminei! Identificamos restrições com *viabilidade real* de remoção jurídica. O cenário é favorável para sua restauração de crédito. ✅\n\nQuer que eu explique como funciona o processo completo?`;
+      contato.etapa = ia?.etapa || 8;
+      historico.push({ r: "b", t: resposta });
+      contato.historico = historico.slice(-20);
+      await salvarContato(id, contato);
+      return res.json({ reply: resposta });
     }
 
-    // ── Aguardando comprovante R$250 ─────────────────────────
-    if (etapa === 10) {
-      if (ehComprovante(msg)) {
-        contato.etapa = 11;
-        historico.push({ r: "c", t: "[comprovante enviado]" });
-        const ia = await chamarIA({ ...contato, etapa: 11 }, "[cliente enviou comprovante de pagamento de R$250]");
-        resposta = ia.resposta;
-        if (ia.etapa) contato.etapa = ia.etapa;
-        historico.push({ r: "b", t: resposta });
-        contato.historico = historico.slice(-20);
-        await salvarContato(id, contato);
-        return res.json({ reply: resposta });
-      }
+    // Comprovante R$250
+    if (etapa === 10 && ehComprovante(msg)) {
+      console.log("💰 Comprovante R$250 detectado");
+      historico.push({ r: "c", t: "[comprovante pix R$250]" });
+      const ia = await chamarIA({ ...contato, etapa: 11 }, "[cliente enviou comprovante do pagamento de R$250 da entrada]");
+      const resposta = ia?.resposta || `Entrada confirmada! 🎉 Obrigado, ${nome}!\n\nSeu processo foi oficialmente aberto. Nossa equipe jurídica já está trabalhando no seu caso.\n\nVocê receberá atualizações aqui mesmo. Qualquer dúvida é só chamar! 💪`;
+      contato.etapa = ia?.etapa || 11;
+      historico.push({ r: "b", t: resposta });
+      contato.historico = historico.slice(-20);
+      await salvarContato(id, contato);
+      return res.json({ reply: resposta });
     }
 
-    // ── IA processa tudo o mais ──────────────────────────────
+    // IA processa tudo o mais
     historico.push({ r: "c", t: msg });
     const ia = await chamarIA(contato, msg);
-    resposta = ia.resposta || "Desculpe, pode repetir?";
 
-    // Atualiza etapa se IA avançou
-    if (ia.etapa && ia.etapa >= contato.etapa) contato.etapa = ia.etapa;
+    let resposta = ia?.resposta;
 
-    // Ações especiais
-    if (ia.acao === "humano") {
-      contato.modoHumano = true;
-      resposta = "Um momento! 👋 Vou te conectar com um dos nossos especialistas agora...";
+    // Fallback se IA falhar
+    if (!resposta) {
+      console.log("⚠️ IA falhou — usando fallback");
+      const fallbacks = {
+        2: `Entendido! E você sabe onde estão essas restrições? (Serasa, SPC, algum banco específico?)`,
+        3: `Certo, ${nome}. Vou ser transparente: nosso trabalho é diferente de renegociação. Fazemos análise jurídica para identificar *irregularidades* que permitem a remoção das restrições. Quer entender melhor?`,
+        4: `Para sabermos se seu caso tem viabilidade, faço um diagnóstico completo do seu CPF por *R$ 50*. Se seguir com o processo, esse valor já vem abatido. O que acha?`,
+        5: `Ótimo! Me envia seu *nome completo* e *CPF* para preparar a consulta. 📋`,
+        6: `Perfeito! Segue o link para o pagamento de R$ 50:\n\n👇 ${BASE_URL}/pix/50\n\nAssim que pagar, me envia o comprovante aqui. 📸`,
+        8: `Para darmos entrada no processo:\n\n✅ *Entrada:* R$ 250\n🏆 *Sucesso:* R$ 450 _(somente após o êxito)_\n🎁 Os R$ 50 já estão abatidos!\n\nPosso seguir?`,
+        9: `Perfeito! Segue o link para o pagamento de R$ 250:\n\n👇 ${BASE_URL}/pix/250\n\nAssim que pagar, me envia o comprovante. 📸`,
+      };
+      resposta = fallbacks[etapa] || `Desculpe, tive um problema técnico. Pode repetir sua mensagem?`;
     }
 
-    if (ia.acao === "aguardar_pix_50") {
-      contato.etapa = 7;
-      resposta = resposta.includes(BASE_URL) ? resposta : `${resposta}\n\n👇 *Link para pagamento:*\n${BASE_URL}/pix/50`;
-    }
-
-    if (ia.acao === "aguardar_pix_250") {
-      contato.etapa = 10;
-      resposta = resposta.includes(BASE_URL) ? resposta : `${resposta}\n\n👇 *Link para pagamento:*\n${BASE_URL}/pix/250`;
-    }
+    if (ia?.etapa && ia.etapa >= contato.etapa) contato.etapa = ia.etapa;
+    if (ia?.acao === "humano") { contato.modoHumano = true; resposta = "Um momento! 👋 Vou te conectar com um especialista agora..."; }
+    if (ia?.acao === "aguardar_pix_50")  { contato.etapa = 7;  if (!resposta.includes("pix/50"))  resposta += `\n\n👇 ${BASE_URL}/pix/50`; }
+    if (ia?.acao === "aguardar_pix_250") { contato.etapa = 10; if (!resposta.includes("pix/250")) resposta += `\n\n👇 ${BASE_URL}/pix/250`; }
 
     historico.push({ r: "b", t: resposta });
     contato.historico = historico.slice(-20);
     await salvarContato(id, contato);
+
+    console.log(`✅ Resposta enviada: "${resposta.substring(0,80)}"`);
     res.json({ reply: resposta });
 
   } catch (err) {
-    console.error("Erro geral:", err.message);
-    res.status(500).json({ reply: "Erro interno, tente novamente em instantes." });
+    console.error("❌ Erro geral:", err.message, err.stack);
+    res.status(200).json({ reply: "Desculpe, tive um problema técnico. Pode repetir?" });
   }
 });
 
-// ── Página Pix ────────────────────────────────────────────────
+// ── Rota de diagnóstico ───────────────────────────────────────
+app.get("/debug", async (req, res) => {
+  const redisOk = await redis.ping().then(() => true).catch(() => false);
+  const deepseekOk = await fetch("https://api.deepseek.com/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${DEEPSEEK_KEY}` },
+    body: JSON.stringify({ model: "deepseek-chat", max_tokens: 10, messages: [{ role: "user", content: "oi" }] })
+  }).then(r => r.ok).catch(() => false);
+
+  res.json({ status: "ok", redis: redisOk, deepseek: deepseekOk, baseUrl: BASE_URL });
+});
+
+// ── Rota de teste do webhook ──────────────────────────────────
+app.get("/teste/:msg", async (req, res) => {
+  const fakeReq = { body: { phone: "5511999990001", sender: "Teste", message: req.params.msg } };
+  const fakeRes = { json: (d) => res.json(d) };
+  app._router.handle({ ...fakeReq, method: "POST", url: "/webhook", path: "/webhook" }, fakeRes, () => {});
+});
+
+// ── Pix ───────────────────────────────────────────────────────
 app.get("/pix/:valor", async (req, res) => {
   try {
     const valor = parseFloat(req.params.valor);
@@ -328,22 +298,20 @@ app.get("/pix/:valor", async (req, res) => {
     const html = await gerarPaginaPix(valor, labels[valor] || "Pagamento JustHelp");
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.send(html);
-  } catch (e) {
-    res.status(500).send("Erro ao gerar QR Code");
-  }
+  } catch (e) { res.status(500).send("Erro ao gerar QR Code: " + e.message); }
 });
 
 // ── Admin ─────────────────────────────────────────────────────
-app.post("/assumir",  async (req, res) => { const c = await getContato(req.body.telefone); c.modoHumano = true;  await salvarContato(req.body.telefone, c); res.json({ ok: true }); });
-app.post("/liberar",  async (req, res) => { const c = await getContato(req.body.telefone); c.modoHumano = false; await salvarContato(req.body.telefone, c); res.json({ ok: true }); });
-app.post("/resetar",  async (req, res) => { await redis.del(`c:${req.body.telefone}`); res.json({ ok: true }); });
-app.get("/contatos",  async (req, res) => {
+app.post("/assumir", async (req, res) => { const c = await getContato(req.body.telefone); c.modoHumano = true;  await salvarContato(req.body.telefone, c); res.json({ ok: true }); });
+app.post("/liberar", async (req, res) => { const c = await getContato(req.body.telefone); c.modoHumano = false; await salvarContato(req.body.telefone, c); res.json({ ok: true }); });
+app.post("/resetar", async (req, res) => { await redis.del(`c:${req.body.telefone}`); res.json({ ok: true }); });
+app.get("/contatos", async (req, res) => {
   const keys = await redis.keys("c:*");
   if (!keys.length) return res.json([]);
   const vals = await Promise.all(keys.map(k => redis.get(k)));
   res.json(keys.map((k, i) => ({ id: k.replace("c:",""), ...vals[i] })).filter(c => !c.id.startsWith("teste_")));
 });
-app.get("/", (req, res) => res.send("🤖 JustHelp Bot v6 — Online ✅"));
+app.get("/", (req, res) => res.send("🤖 JustHelp Bot v7 — Online ✅"));
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`✅ JustHelp Bot v6 na porta ${PORT}`));
+app.listen(PORT, () => console.log(`✅ JustHelp Bot v7 na porta ${PORT} | BASE_URL=${BASE_URL}`));
