@@ -385,7 +385,7 @@ app.post("/webhook", async (req, res) => {
     } else if (etapa===21) {
       if      (num==="1") { c.etapa=3; reply=M.onde(); }
       else if (num==="2") { c.etapa=20; reply=M.como_funciona(); }
-      else if (num==="3") { c.etapa=22; reply=`Claro, ${n}! Qual é a sua dúvida? Pode falar à vontade. 😊`; }
+      else if (num==="3") { c.etapa=220; reply=M.menu_categorias(); }
       else                { reply=M.nao_entendi()+"\n\n"+M.menu_retorno(n); }
 
     // ── E22: menu categorias ─────────────────────────────────
