@@ -12,6 +12,39 @@ const redis = new Redis({
   token: "gQAAAAAAAYAPAAIncDIwNjA2ZjEyZDUwZGQ0YTJmOGEyOWExMzk5ODIwOTI4MnAyOTgzMTk",
 });
 
+// ── Evolution API ─────────────────────────────────────────────
+// Configure essas variáveis no Railway → Variables
+const EVO_URL      = process.env.EVOLUTION_URL   || "";   // ex: https://evo.seuapp.railway.app
+const EVO_KEY      = process.env.EVOLUTION_KEY   || "";   // API Key do Evolution
+const EVO_INSTANCE = process.env.EVOLUTION_INST  || "justhelp"; // nome da instância
+
+async function enviarMensagem(telefone, texto) {
+  if (!EVO_URL || !EVO_KEY) {
+    console.warn("⚠️ EVOLUTION_URL ou EVOLUTION_KEY não configurados");
+    return;
+  }
+  try {
+    const r = await fetch(`${EVO_URL}/message/sendText/${EVO_INSTANCE}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": EVO_KEY,
+      },
+      body: JSON.stringify({
+        number: telefone,
+        text: texto,
+        delay: 500, // pequeno delay para parecer mais natural
+      }),
+    });
+    if (!r.ok) {
+      const err = await r.text();
+      console.error("Evolution API erro:", r.status, err.substring(0,100));
+    }
+  } catch(e) {
+    console.error("Evolution envio falhou:", e.message);
+  }
+}
+
 const BASE_URL = process.env.RAILWAY_PUBLIC_DOMAIN
   ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
   : process.env.BASE_URL || "https://whatauto-bot-production.up.railway.app";
@@ -307,39 +340,72 @@ async function enviarPix(valor, contato, id, res) {
 //  WEBHOOK PRINCIPAL
 // ─────────────────────────────────────────────────────────────
 app.post("/webhook", async (req, res) => {
-  console.log("━━━━ MSG ━━━━", JSON.stringify(req.body).substring(0,150));
+  res.json({ ok: true }); // responde imediatamente pro Evolution API
+
   try {
-    const id     = getId(req.body);
-    const rawMsg = (req.body.message || "").trim();
-    const num    = rawMsg.replace(/[^0-9]/g,"");
-    const c      = await get(id);
+    const body  = req.body;
+    const event = body.event;
+
+    // Evolution API: só processa messages.upsert
+    if (event !== "messages.upsert") return;
+
+    const data = body.data;
+    if (!data) return;
+
+    // Ignora mensagens do próprio bot e grupos
+    if (data.key?.fromMe) return;
+    if (data.key?.remoteJid?.endsWith("@g.us")) return;
+
+    const msgData = data.message;
+    if (!msgData) return;
+
+    // Extrai telefone (só números)
+    const id = (data.key?.remoteJid || "").replace("@s.whatsapp.net","").replace(/\D/g,"") || "teste";
+
+    // Extrai texto da mensagem
+    const rawMsg = (
+      msgData?.conversation ||
+      msgData?.extendedTextMessage?.text ||
+      msgData?.imageMessage?.caption ||
+      msgData?.documentMessage?.caption ||
+      msgData?.videoMessage?.caption ||
+      ""
+    ).trim();
+
+    const num = rawMsg.replace(/[^0-9]/g,"");
+    const c   = await get(id);
     let { etapa, nome: n, modoHumano } = c;
+    let reply = "";
 
-    if (modoHumano) return res.json({ reply:"" });
+    console.log(`━━ [${id}] etapa=${etapa} msg="${rawMsg.substring(0,50)}"`);
 
-    // Pedido de humano a qualquer momento
+    if (modoHumano) return;
+
+    // Pedido de humano
     if (/humano|atendente|falar com (algu[eé]m|pessoa)|quero humano/i.test(rawMsg)) {
       c.modoHumano=true; await save(id,c);
-      return res.json({ reply: M.humano() });
+      await enviarMensagem(id, M.humano());
+      return;
     }
 
-    // Reativação — lead voltou depois de sumir numa etapa crítica
-    const agora = Date.now();
-    const inativo = c.ultimaMsg ? (agora - c.ultimaMsg) > 2*60*60*1000 : false; // 2h+
-    c.ultimaMsg = agora;
+    // Reativação
+    const agora  = Date.now();
+    const inativo = c.ultimaMsg ? (agora - c.ultimaMsg) > 2*60*60*1000 : false;
+    c.ultimaMsg  = agora;
     if (inativo && etapa>=5 && etapa<=12 && !isOi(rawMsg)) {
       c.reativacoes = (c.reativacoes||0)+1;
-      if (c.reativacoes===1) { reply=M.reativacao_1(n); await save(id,c); return res.json({reply}); }
-      if (c.reativacoes===2) { reply=M.reativacao_2(n); await save(id,c); return res.json({reply}); }
+      if (c.reativacoes===1) { await save(id,c); await enviarMensagem(id, M.reativacao_1(n)); return; }
+      if (c.reativacoes===2) { await save(id,c); await enviarMensagem(id, M.reativacao_2(n)); return; }
     }
-    // Reinício — qualquer msg nova quando fluxo acabou, ou saudação
+
+    // Reinício
     if (etapa===0 || etapa===17 || isOi(rawMsg)) {
       Object.assign(c,{etapa:1,nome:"",cpf:"",dados:"",modoHumano:false});
       await save(id,c);
-      return res.json({ reply: M.inicio() });
+      await enviarMensagem(id, M.inicio());
+      return;
     }
 
-    let reply="";
 
     // ── E1: captura nome ──────────────────────────────────────
     if (etapa===1) {
@@ -529,122 +595,23 @@ app.post("/webhook", async (req, res) => {
 
     // ── E8: aguarda comprovante / confirmação R$50 ────────────
     } else if (etapa===8) {
-      // qualquer envio = comprovante (imagem chega como msg vazia)
-      c.etapa=9;
-      reply=M.analisando_1(n);
-      // agenda mensagens de suspense (simuladas via etapas)
-      await save(id,c);
-      // envia resposta imediata e agenda diagnóstico
-      setTimeout(async()=>{
-        const cc=await get(id);
-        if(cc.etapa===9){
-          cc.etapa=10;
-          await save(id,cc);
-        }
-      },2000);
-      return res.json({reply});
-
-    // ── E9/10: simulação de análise ───────────────────────────
-    } else if (etapa===9||etapa===10) {
-      c.etapa=11;
-      reply=M.diagnostico(n);
-
-    // ── E11: resultado diagnóstico ────────────────────────────
-    } else if (etapa===11) {
-      if      (num==="1") { c.etapa=12; reply=M.oferta_processo(n); }
-      else if (num==="2") { c.etapa=111; reply=M.obj_duvida_diagnostico(n); }
-      else                { reply=M.nao_entendi()+"\n\n"+M.diagnostico(n); }
-
-    } else if (etapa===111) { // dúvida diagnóstico
-      if      (num==="1") { c.etapa=12; reply=M.oferta_processo(n); }
-      else if (num==="2") { reply=`Pode me contar qual a dúvida específica? Estou aqui para explicar! 😊`; }
-      else                { reply=M.nao_entendi()+"\n\n"+M.obj_duvida_diagnostico(n); }
-
-    // ── E12: oferta processo completo ─────────────────────────
-    } else if (etapa===12) {
-      if      (num==="1") { c.etapa=13;  const p=await enviarPix(250,c,id,res); reply=p.reply; }
-      else if (num==="2") { c.etapa=121; reply=M.obj_caro(n); }
-      else if (num==="3") { c.etapa=122; reply=M.obj_falhar(); }
-      else if (num==="4") { c.etapa=123; reply=M.obj_tempo(); }
-      else if (num==="5") { c.etapa=124; reply=M.obj_contrato(); }
-      else if (num==="6") { c.etapa=125; reply=M.obj_pensar_250(n); }
-      else                { reply=M.nao_entendi()+"\n\n"+M.oferta_processo(n); }
-
-    // ── Objeções R$250 ────────────────────────────────────────
-    } else if (etapa===121) { // caro
-      if      (num==="1") { c.etapa=13; const p=await enviarPix(250,c,id,res); reply=p.reply; }
-      else if (num==="2") { c.etapa=1211; reply=M.obj_sem_dinheiro_250(); }
-      else                { reply=M.nao_entendi()+"\n\n"+M.obj_caro(n); }
-
-    } else if (etapa===1211) { // sem dinheiro R$250
-      if      (num==="1") { c.etapa=13; const p=await enviarPix(250,c,id,res); reply=p.reply; }
-      else if (num==="2") { reply=`Sem problema! Manda *Oi* quando estiver pronto. 😊`; c.etapa=0; }
-      else                { reply=M.nao_entendi()+"\n\n"+M.obj_sem_dinheiro_250(); }
-
-    } else if (etapa===122) { // e se falhar
-      if      (num==="1") { c.etapa=13; const p=await enviarPix(250,c,id,res); reply=p.reply; }
-      else if (num==="2") { c.etapa=12; reply=M.oferta_processo(n); }
-      else                { reply=M.nao_entendi()+"\n\n"+M.obj_falhar(); }
-
-    } else if (etapa===123) { // tempo
-      if      (num==="1") { c.etapa=13; const p=await enviarPix(250,c,id,res); reply=p.reply; }
-      else if (num==="2") { c.etapa=12; reply=M.oferta_processo(n); }
-      else                { reply=M.nao_entendi()+"\n\n"+M.obj_tempo(); }
-
-    } else if (etapa===124) { // contrato
-      if      (num==="1") { c.etapa=13; const p=await enviarPix(250,c,id,res); reply=p.reply; }
-      else if (num==="2") { c.etapa=12; reply=M.oferta_processo(n); }
-      else                { reply=M.nao_entendi()+"\n\n"+M.obj_contrato(); }
-
-    } else if (etapa===125) { // preciso pensar R$250
-      if      (num==="1") { c.etapa=1211; reply=M.obj_sem_dinheiro_250(); }
-      else if (num==="2") { c.etapa=122; reply=M.obj_falhar(); }
-      else if (num==="3") { c.modoHumano=true; reply=M.humano(); }
-      else if (num==="4") { reply=M.urgencia()+`Sem problema! Mas lembra: essa vaga não garanto pra amanhã. Manda *Oi* quando quiser. 😊`; c.etapa=0; }
-      else                { reply=M.nao_entendi()+"\n\n"+M.obj_pensar_250(n); }
-
-    // ── E13: aguarda comprovante R$250 ────────────────────────
-    } else if (etapa===13) {
-      c.etapa=14;
-      // salvar notificação
-      redis.lpush("notifs", JSON.stringify({data:new Date().toLocaleString("pt-BR"),nome:c.nome||"?",tel:id,valor:"R$ 250 — Entrada"})).catch(()=>{});
-      reply=M.pedir_rg(n);
-
-    // ── E14: aguarda foto RG ──────────────────────────────────
-    } else if (etapa===14) {
-      c.etapa=15;
-      reply=M.pedir_cpf();
-
-    // ── E15: aguarda foto CPF ─────────────────────────────────
-    } else if (etapa===15) {
-      c.etapa=16;
-      reply=M.docs_recebidos(n);
-
-    // ── E16: fechamento ───────────────────────────────────────
-    } else if (etapa===16) {
-      c.etapa=17;
-      reply=M.fechamento(n);
-
-    } else if (etapa===17) {
-      const dias = c.processStart ? Math.floor((Date.now()-c.processStart)/(1000*60*60*24)) : 0;
-      if      (dias>=25 && !c.upd25) { c.upd25=true; reply=M.update_d25(n); }
-      else if (dias>=15 && !c.upd15) { c.upd15=true; reply=M.update_d15(n); }
-      else if (dias>=7  && !c.upd7)  { c.upd7=true;  reply=M.update_d7(n); }
-      else { reply=`Processo em andamento! ✅ Qualquer dúvida é só chamar, ${n}. Estamos com você! 💪`; }
+      // qualquer envio = comprovante
+      c.etapa=10;
+      reply=M.analisando_1(n)+"\n\n"+M.diagnostico(n);
 
     } else {
-      reply=`Olá, ${n||""}! 😊 Manda um *Oi* para acessar o menu.`;
+      reply = M.nao_entendi();
     }
 
-    await save(id,c);
+    await save(id, c);
     console.log(`[${id}] E${etapa}→E${c.etapa} reply="${reply.substring(0,60)}"`);
-    res.json({reply});
+    if (reply) await enviarMensagem(id, reply);
 
   } catch(err) {
-    console.error("❌",err.message);
-    res.status(200).json({reply:"Desculpe, tive um problema técnico. Pode repetir?"});
+    console.error("❌ Webhook erro:", err.message);
   }
 });
+
 
 // ─────────────────────────────────────────────────────────────
 //  REATIVAÇÃO — respostas ao menu de reativação
@@ -717,7 +684,7 @@ app.get("/pix/:valor", async (req,res) => {
 // ─────────────────────────────────────────────────────────────
 app.get("/debug", async (req,res) => {
   const rok=await redis.ping().then(()=>true).catch(()=>false);
-  res.json({status:"ok",redis:rok,baseUrl:BASE_URL,node:process.version});
+  res.json({status:"ok",redis:rok,baseUrl:BASE_URL,node:process.version,evolution:{url:EVO_URL||"não configurado",instance:EVO_INSTANCE,keyOk:EVO_KEY.length>0}});
 });
 app.post("/assumir", async (req,res) => {const c=await get(req.body.telefone);c.modoHumano=true; await save(req.body.telefone,c);res.json({ok:true});});
 app.post("/liberar", async (req,res) => {const c=await get(req.body.telefone);c.modoHumano=false;await save(req.body.telefone,c);res.json({ok:true});});
