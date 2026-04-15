@@ -12,38 +12,7 @@ const redis = new Redis({
   token: "gQAAAAAAAYAPAAIncDIwNjA2ZjEyZDUwZGQ0YTJmOGEyOWExMzk5ODIwOTI4MnAyOTgzMTk",
 });
 
-// ── Evolution API ─────────────────────────────────────────────
-// Configure essas variáveis no Railway → Variables
-const EVO_URL      = process.env.EVOLUTION_URL   || "";   // ex: https://evo.seuapp.railway.app
-const EVO_KEY      = process.env.EVOLUTION_KEY   || "";   // API Key do Evolution
-const EVO_INSTANCE = process.env.EVOLUTION_INST  || "justhelp"; // nome da instância
 
-async function enviarMensagem(telefone, texto) {
-  if (!EVO_URL || !EVO_KEY) {
-    console.warn("⚠️ EVOLUTION_URL ou EVOLUTION_KEY não configurados");
-    return;
-  }
-  try {
-    const r = await fetch(`${EVO_URL}/message/sendText/${EVO_INSTANCE}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": EVO_KEY,
-      },
-      body: JSON.stringify({
-        number: telefone,
-        text: texto,
-        delay: 500, // pequeno delay para parecer mais natural
-      }),
-    });
-    if (!r.ok) {
-      const err = await r.text();
-      console.error("Evolution API erro:", r.status, err.substring(0,100));
-    }
-  } catch(e) {
-    console.error("Evolution envio falhou:", e.message);
-  }
-}
 
 const BASE_URL = process.env.RAILWAY_PUBLIC_DOMAIN
   ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
@@ -340,70 +309,38 @@ async function enviarPix(valor, contato, id, res) {
 //  WEBHOOK PRINCIPAL
 // ─────────────────────────────────────────────────────────────
 app.post("/webhook", async (req, res) => {
-  res.json({ ok: true }); // responde imediatamente pro Evolution API
-
+  console.log("━━━━ MSG ━━━━", JSON.stringify(req.body).substring(0,150));
   try {
-    const body  = req.body;
-    const event = body.event;
-
-    // Evolution API: só processa messages.upsert
-    if (event !== "messages.upsert") return;
-
-    const data = body.data;
-    if (!data) return;
-
-    // Ignora mensagens do próprio bot e grupos
-    if (data.key?.fromMe) return;
-    if (data.key?.remoteJid?.endsWith("@g.us")) return;
-
-    const msgData = data.message;
-    if (!msgData) return;
-
-    // Extrai telefone (só números)
-    const id = (data.key?.remoteJid || "").replace("@s.whatsapp.net","").replace(/\D/g,"") || "teste";
-
-    // Extrai texto da mensagem
-    const rawMsg = (
-      msgData?.conversation ||
-      msgData?.extendedTextMessage?.text ||
-      msgData?.imageMessage?.caption ||
-      msgData?.documentMessage?.caption ||
-      msgData?.videoMessage?.caption ||
-      ""
-    ).trim();
-
-    const num = rawMsg.replace(/[^0-9]/g,"");
-    const c   = await get(id);
+    const id     = getId(req.body);
+    const rawMsg = (req.body.message || "").trim();
+    const num    = rawMsg.replace(/[^0-9]/g,"");
+    const c      = await get(id);
     let { etapa, nome: n, modoHumano } = c;
-    let reply = "";
+    let reply    = "";
 
-    console.log(`━━ [${id}] etapa=${etapa} msg="${rawMsg.substring(0,50)}"`);
-
-    if (modoHumano) return;
+    if (modoHumano) return res.json({ reply:"" });
 
     // Pedido de humano
     if (/humano|atendente|falar com (algu[eé]m|pessoa)|quero humano/i.test(rawMsg)) {
       c.modoHumano=true; await save(id,c);
-      await enviarMensagem(id, M.humano());
-      return;
+      return res.json({ reply: M.humano() });
     }
 
     // Reativação
-    const agora  = Date.now();
+    const agora   = Date.now();
     const inativo = c.ultimaMsg ? (agora - c.ultimaMsg) > 2*60*60*1000 : false;
-    c.ultimaMsg  = agora;
+    c.ultimaMsg   = agora;
     if (inativo && etapa>=5 && etapa<=12 && !isOi(rawMsg)) {
       c.reativacoes = (c.reativacoes||0)+1;
-      if (c.reativacoes===1) { await save(id,c); await enviarMensagem(id, M.reativacao_1(n)); return; }
-      if (c.reativacoes===2) { await save(id,c); await enviarMensagem(id, M.reativacao_2(n)); return; }
+      if (c.reativacoes===1) { await save(id,c); return res.json({ reply: M.reativacao_1(n) }); }
+      if (c.reativacoes===2) { await save(id,c); return res.json({ reply: M.reativacao_2(n) }); }
     }
 
     // Reinício
     if (etapa===0 || etapa===17 || isOi(rawMsg)) {
       Object.assign(c,{etapa:1,nome:"",cpf:"",dados:"",modoHumano:false});
       await save(id,c);
-      await enviarMensagem(id, M.inicio());
-      return;
+      return res.json({ reply: M.inicio() });
     }
 
 
@@ -603,12 +540,13 @@ app.post("/webhook", async (req, res) => {
       reply = M.nao_entendi();
     }
 
-    await save(id, c);
+    await save(id,c);
     console.log(`[${id}] E${etapa}→E${c.etapa} reply="${reply.substring(0,60)}"`);
-    if (reply) await enviarMensagem(id, reply);
+    res.json({ reply });
 
   } catch(err) {
-    console.error("❌ Webhook erro:", err.message);
+    console.error("❌",err.message);
+    res.status(200).json({ reply:"Desculpe, tive um problema técnico. Pode repetir?" });
   }
 });
 
@@ -684,7 +622,7 @@ app.get("/pix/:valor", async (req,res) => {
 // ─────────────────────────────────────────────────────────────
 app.get("/debug", async (req,res) => {
   const rok=await redis.ping().then(()=>true).catch(()=>false);
-  res.json({status:"ok",redis:rok,baseUrl:BASE_URL,node:process.version,evolution:{url:EVO_URL||"não configurado",instance:EVO_INSTANCE,keyOk:EVO_KEY.length>0}});
+  res.json({status:"ok",redis:rok,baseUrl:BASE_URL,node:process.version});
 });
 app.post("/assumir", async (req,res) => {const c=await get(req.body.telefone);c.modoHumano=true; await save(req.body.telefone,c);res.json({ok:true});});
 app.post("/liberar", async (req,res) => {const c=await get(req.body.telefone);c.modoHumano=false;await save(req.body.telefone,c);res.json({ok:true});});
@@ -695,7 +633,7 @@ app.get("/contatos", async (req,res) => {
   const vals=await Promise.all(keys.map(k=>redis.get(k)));
   res.json(keys.map((k,i)=>({id:k.replace("c:",""),...vals[i]})).filter(c=>!c.id.startsWith("teste_")));
 });
-app.get("/",(_, res)=>res.send("🤖 JustHelp Bot v10 — Online ✅"));
+app.get("/",(_,res) => res.redirect("/dashboard"));
 
 const PORT=process.env.PORT||3000;
 app.listen(PORT,()=>console.log(`✅ JustHelp Bot v10 | porta ${PORT}`));
