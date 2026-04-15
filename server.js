@@ -531,10 +531,95 @@ app.post("/webhook", async (req, res) => {
       reply = pixResp.reply;
 
     // ── E8: aguarda comprovante / confirmação R$50 ────────────
+    // ── E8: comprovante R$50 recebido ────────────────────────
     } else if (etapa===8) {
-      // qualquer envio = comprovante
       c.etapa=10;
-      reply=M.analisando_1(n)+"\n\n"+M.diagnostico(n);
+      redis.lpush("notifs", JSON.stringify({data:new Date().toLocaleString("pt-BR"),nome:c.nome||"?",tel:id,valor:"R$ 50 — Diagnóstico"})).catch(()=>{});
+      reply=M.analisando_1(n)+"\n\n"+M.analisando_2()+"\n\n"+M.analisando_3()+"\n\n"+M.analisando_4()+"\n\n"+M.diagnostico(n);
+
+    // ── E10: resultado diagnóstico ────────────────────────────
+    } else if (etapa===10) {
+      if      (num==="1") { c.etapa=12; reply=M.oferta_processo(n); }
+      else if (num==="2") { c.etapa=111; reply=M.obj_duvida_diagnostico(n); }
+      else                { reply=M.nao_entendi()+"\n\n"+M.diagnostico(n); }
+
+    } else if (etapa===111) {
+      if      (num==="1") { c.etapa=12; reply=M.oferta_processo(n); }
+      else if (num==="2") { reply=`Pode me contar qual a dúvida específica? Estou aqui para explicar! 😊`; }
+      else                { reply=M.nao_entendi()+"\n\n"+M.obj_duvida_diagnostico(n); }
+
+    // ── E12: oferta processo completo ─────────────────────────
+    } else if (etapa===12) {
+      if      (num==="1") { c.etapa=13; reply=M.enviar_pix250_manual(`${BASE_URL}/pix/250`); }
+      else if (num==="2") { c.etapa=121; reply=M.obj_caro(n); }
+      else if (num==="3") { c.etapa=122; reply=M.obj_falhar(); }
+      else if (num==="4") { c.etapa=123; reply=M.obj_tempo(); }
+      else if (num==="5") { c.etapa=124; reply=M.obj_contrato(); }
+      else if (num==="6") { c.etapa=125; reply=M.obj_pensar_250(n); }
+      else                { reply=M.nao_entendi()+"\n\n"+M.oferta_processo(n); }
+
+    // ── Objeções R$250 ────────────────────────────────────────
+    } else if (etapa===121) {
+      if      (num==="1") { c.etapa=13; reply=M.enviar_pix250_manual(`${BASE_URL}/pix/250`); }
+      else if (num==="2") { c.etapa=1211; reply=M.obj_sem_dinheiro_250(); }
+      else                { reply=M.nao_entendi()+"\n\n"+M.obj_caro(n); }
+
+    } else if (etapa===1211) {
+      if      (num==="1") { c.etapa=13; reply=M.enviar_pix250_manual(`${BASE_URL}/pix/250`); }
+      else if (num==="2") { reply=`Sem problema! Manda *Oi* quando estiver pronto. 😊`; c.etapa=0; }
+      else                { reply=M.nao_entendi()+"\n\n"+M.obj_sem_dinheiro_250(); }
+
+    } else if (etapa===122) {
+      if      (num==="1") { c.etapa=13; reply=M.enviar_pix250_manual(`${BASE_URL}/pix/250`); }
+      else if (num==="2") { c.etapa=12; reply=M.oferta_processo(n); }
+      else                { reply=M.nao_entendi()+"\n\n"+M.obj_falhar(); }
+
+    } else if (etapa===123) {
+      if      (num==="1") { c.etapa=13; reply=M.enviar_pix250_manual(`${BASE_URL}/pix/250`); }
+      else if (num==="2") { c.etapa=12; reply=M.oferta_processo(n); }
+      else                { reply=M.nao_entendi()+"\n\n"+M.obj_tempo(); }
+
+    } else if (etapa===124) {
+      if      (num==="1") { c.etapa=13; reply=M.enviar_pix250_manual(`${BASE_URL}/pix/250`); }
+      else if (num==="2") { c.etapa=12; reply=M.oferta_processo(n); }
+      else                { reply=M.nao_entendi()+"\n\n"+M.obj_contrato(); }
+
+    } else if (etapa===125) {
+      if      (num==="1") { c.etapa=1211; reply=M.obj_sem_dinheiro_250(); }
+      else if (num==="2") { c.etapa=122;  reply=M.obj_falhar(); }
+      else if (num==="3") { c.modoHumano=true; reply=M.humano(); }
+      else if (num==="4") { reply=M.urgencia()+`Sem problema! Manda um *Oi* quando quiser. 😊`; c.etapa=0; }
+      else                { reply=M.nao_entendi()+"\n\n"+M.obj_pensar_250(n); }
+
+    // ── E13: aguarda comprovante R$250 ────────────────────────
+    } else if (etapa===13) {
+      redis.lpush("notifs", JSON.stringify({data:new Date().toLocaleString("pt-BR"),nome:c.nome||"?",tel:id,valor:"R$ 250 — Entrada"})).catch(()=>{});
+      c.etapa=14;
+      reply=M.pedir_rg(n);
+
+    // ── E14: aguarda foto RG ──────────────────────────────────
+    } else if (etapa===14) {
+      c.etapa=15;
+      reply=M.pedir_cpf();
+
+    // ── E15: aguarda foto CPF ─────────────────────────────────
+    } else if (etapa===15) {
+      c.etapa=16;
+      reply=M.docs_recebidos(n);
+
+    // ── E16: entrega fechamento ───────────────────────────────
+    } else if (etapa===16) {
+      c.etapa=17;
+      c.processStart=Date.now();
+      reply=M.fechamento(n);
+
+    // ── E17: processo aberto ──────────────────────────────────
+    } else if (etapa===17) {
+      const dias=c.processStart?Math.floor((Date.now()-c.processStart)/(1000*60*60*24)):0;
+      if      (dias>=25&&!c.upd25){c.upd25=true;reply=M.update_d25(n);}
+      else if (dias>=15&&!c.upd15){c.upd15=true;reply=M.update_d15(n);}
+      else if (dias>=7 &&!c.upd7) {c.upd7=true; reply=M.update_d7(n);}
+      else { reply=`Processo em andamento! ✅ Qualquer dúvida é só chamar, ${n}. Estamos com você! 💪`; }
 
     } else {
       reply = M.nao_entendi();
