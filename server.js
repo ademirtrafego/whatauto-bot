@@ -461,7 +461,7 @@ async function processar(id, rawMsg) {
     var f   = fxs[n] || "Dívida registrada —";
     c.dados = (c.dados || "") + " | Dívida: " + f;
     c.etapa = 6;
-    reply   = M.valor_resp(f) + "\n\n" + M.depoimentos() + "\n\n" + M.posicionamento(nome);
+    reply   = M.posicionamento(nome);
 
   // ── E6: posicionamento + oferta diagnóstico ─────────────────
   } else if (etapa === 6) {
@@ -521,7 +521,7 @@ async function processar(id, rawMsg) {
   // ── E8: comprovante R$50 — qualquer envio avança ─────────────
   } else if (etapa === 8) {
     c.etapa = 9;
-    reply   = M.analisando_1(nome) + "\n\n" + M.analisando_2() + "\n\n" + M.analisando_3() + "\n\n" + M.analisando_4() + "\n\n" + M.diagnostico(nome);
+    reply   = "Obrigado, " + nome + "! ✅\n\nEm alguns minutos você receberá a análise completa do seu CPF aqui mesmo. 😊";
 
   // ── E9: lead responde ao diagnóstico ────────────────────────
   } else if (etapa === 9) {
